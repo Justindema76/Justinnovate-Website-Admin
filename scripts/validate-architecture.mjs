@@ -1,0 +1,79 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { spawnSync } from 'node:child_process';
+
+const root = process.cwd();
+const failures = [];
+
+function walk(dir) {
+  const entries = [];
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    const stat = statSync(full);
+    if (stat.isDirectory()) entries.push(...walk(full));
+    else entries.push(full);
+  }
+  return entries;
+}
+
+function expectFile(path) {
+  try {
+    if (!statSync(join(root, path)).isFile()) failures.push(`Missing file: ${path}`);
+  } catch {
+    failures.push(`Missing file: ${path}`);
+  }
+}
+
+[
+  'api/_shared/auth.js',
+  'api/_shared/http.js',
+  'api/_shared/siteRegistry.js',
+  'api/_shared/supabase.js',
+  'api/admin/sites.js',
+  'api/admin/justindematteis/service-requests.js',
+  'api/admin/justindematteis/hiring-contacts.js',
+  'api/admin/justindematteis/departments.js',
+  'api/admin/justindematteis/service-request-assignment.js',
+  'api/admin/justconsignin/demo-requests.js',
+  'api/admin/justconsignin/beta-partners.js',
+].forEach(expectFile);
+
+const apiFiles = walk(join(root, 'api')).filter(file => file.endsWith('.js'));
+
+for (const file of apiFiles) {
+  const rel = relative(root, file);
+  const source = readFileSync(file, 'utf8');
+
+  if (source.includes('SUPABASE_SECRET_KEY')) {
+    failures.push(`${rel}: secret/service-role Supabase key is forbidden in this admin backend.`);
+  }
+
+  if (/req\.query\?\.site|req\.query\.site|body\.siteKey|req\.body\?\.siteKey/.test(source)) {
+    failures.push(`${rel}: site selection must come from the server-owned route, not request data.`);
+  }
+
+  if (rel.includes('api/admin/justindematteis/') && /JUSTCONSIGNIN|justconsignin/.test(source)) {
+    failures.push(`${rel}: Justin route references JustConsignIn.`);
+  }
+
+  if (rel.includes('api/admin/justconsignin/') && /SITE_KEYS\.JUSTIN\b|justindematteis/.test(source)) {
+    failures.push(`${rel}: JustConsignIn route references JustinDeMatteis.`);
+  }
+
+  const syntax = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+  if (syntax.status !== 0) {
+    failures.push(`${rel}: JavaScript syntax check failed\n${syntax.stderr}`);
+  }
+}
+
+if (failures.length) {
+  console.error('\nArchitecture validation failed:\n');
+  failures.forEach(failure => console.error(`- ${failure}`));
+  process.exit(1);
+}
+
+console.log(`Architecture validation passed for ${apiFiles.length} API files.`);
+console.log('Two-site isolation: OK');
+console.log('No service-role secret dependency: OK');
+console.log('Server-owned site routing: OK');
+console.log('JavaScript syntax: OK');
