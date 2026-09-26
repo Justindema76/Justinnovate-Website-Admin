@@ -1,6 +1,6 @@
 import { getUserFromToken, supabaseUserRest } from '../../_shared/supabase.js';
 import { isWebsiteOwner } from '../../_shared/auth.js';
-import { finishMetricoolOAuth, getMetricoolTools } from '../../_shared/metricoolMcp.js';
+import { finishMetricoolOAuth, getMetricoolTools } from './_lib/metricoolMcp.js';
 
 const CALLBACK_COOKIE = 'jci_metricool_callback_session';
 
