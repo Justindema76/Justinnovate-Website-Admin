@@ -29,12 +29,17 @@ function expectFile(path) {
   'api/_shared/http.js',
   'api/_shared/siteRegistry.js',
   'api/_shared/supabase.js',
+  'api/_shared/siteContent.js',
+  'api/_shared/siteAssets.js',
+  'api/_shared/contentPosts.js',
+  'api/_shared/emailSettings.js',
   'api/admin/sites.js',
+
   'api/admin/justindematteis/service-requests.js',
-  'api/admin/justindematteis/hiring-contacts.js',
-  'api/admin/justindematteis/departments.js',
   'api/admin/justindematteis/service-request-assignment.js',
   'api/admin/justindematteis/service-request-emails.js',
+  'api/admin/justindematteis/hiring-contacts.js',
+  'api/admin/justindematteis/departments.js',
   'api/admin/justindematteis/email-settings.js',
   'api/admin/justindematteis/pages.js',
   'api/admin/justindematteis/styles.js',
@@ -42,6 +47,10 @@ function expectFile(path) {
   'api/admin/justindematteis/blog.js',
   'api/admin/justindematteis/work-posts.js',
   'api/admin/justindematteis/ai-posts.js',
+  'api/admin/justindematteis/videos.js',
+  'api/admin/justindematteis/media.js',
+  'api/admin/justindematteis/social-links.js',
+
   'api/admin/justconsignin/demo-requests.js',
   'api/admin/justconsignin/demo-request-emails.js',
   'api/admin/justconsignin/demo-request-schedule.js',
@@ -51,9 +60,26 @@ function expectFile(path) {
   'api/admin/justconsignin/styles.js',
   'api/admin/justconsignin/global-sections.js',
   'api/admin/justconsignin/blog.js',
+  'api/admin/justconsignin/videos.js',
+  'api/admin/justconsignin/media.js',
+  'api/admin/justconsignin/social-links.js',
+  'api/admin/justconsignin/social-ai.js',
+  'api/admin/justconsignin/social-automation.js',
+  'api/admin/justconsignin/metricool-callback.js',
+  'api/admin/justconsignin/_lib/metricoolMcp.js',
+  'api/admin/justconsignin/_lib/metricoolMcpCompat.js',
+  'api/admin/justconsignin/_lib/metricoolMcpClient.js',
 ].forEach(expectFile);
 
 const apiFiles = walk(join(root, 'api')).filter(file => file.endsWith('.js'));
+
+const rootAdminFiles = apiFiles
+  .map(file => relative(root, file).replace(/\\/g, '/'))
+  .filter(rel => /^api\/admin\/[^/]+\.js$/.test(rel) && rel !== 'api/admin/sites.js');
+
+for (const rel of rootAdminFiles) {
+  failures.push(`${rel}: Mixed root admin endpoint is forbidden. Put it under a website namespace.`);
+}
 
 for (const file of apiFiles) {
   const rel = relative(root, file);
