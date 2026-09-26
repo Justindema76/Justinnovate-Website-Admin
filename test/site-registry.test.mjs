@@ -25,3 +25,23 @@ test('Justin and JustConsignIn have separate feature ownership', () => {
   assert.ok(!justin.features.includes('demo-requests'));
   assert.ok(!justin.features.includes('beta-partners'));
 });
+
+test('JustConsignIn-only automation never appears on Justin', () => {
+  const justin = getSite(SITE_KEYS.JUSTIN);
+  const consign = getSite(SITE_KEYS.JUSTCONSIGNIN);
+
+  assert.ok(consign.features.includes('social-automation'));
+  assert.ok(consign.features.includes('metricool'));
+  assert.ok(!justin.features.includes('social-automation'));
+  assert.ok(!justin.features.includes('metricool'));
+});
+
+test('Justin-only project and recruitment workflows never appear on JustConsignIn', () => {
+  const justin = getSite(SITE_KEYS.JUSTIN);
+  const consign = getSite(SITE_KEYS.JUSTCONSIGNIN);
+
+  for (const feature of ['service-requests','service-request-emails','departments','hiring-contacts']) {
+    assert.ok(justin.features.includes(feature));
+    assert.ok(!consign.features.includes(feature));
+  }
+});
