@@ -34,8 +34,23 @@ function expectFile(path) {
   'api/admin/justindematteis/hiring-contacts.js',
   'api/admin/justindematteis/departments.js',
   'api/admin/justindematteis/service-request-assignment.js',
+  'api/admin/justindematteis/service-request-emails.js',
+  'api/admin/justindematteis/email-settings.js',
+  'api/admin/justindematteis/pages.js',
+  'api/admin/justindematteis/styles.js',
+  'api/admin/justindematteis/global-sections.js',
+  'api/admin/justindematteis/blog.js',
+  'api/admin/justindematteis/work-posts.js',
+  'api/admin/justindematteis/ai-posts.js',
   'api/admin/justconsignin/demo-requests.js',
+  'api/admin/justconsignin/demo-request-emails.js',
+  'api/admin/justconsignin/demo-request-schedule.js',
   'api/admin/justconsignin/beta-partners.js',
+  'api/admin/justconsignin/email-settings.js',
+  'api/admin/justconsignin/pages.js',
+  'api/admin/justconsignin/styles.js',
+  'api/admin/justconsignin/global-sections.js',
+  'api/admin/justconsignin/blog.js',
 ].forEach(expectFile);
 
 const apiFiles = walk(join(root, 'api')).filter(file => file.endsWith('.js'));
