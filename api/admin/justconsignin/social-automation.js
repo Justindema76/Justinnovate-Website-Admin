@@ -6,7 +6,7 @@ import {
   getMetricoolTools,
   metricoolToolText,
   refreshMetricoolOAuth,
-} from '../../_shared/metricoolMcp.js';
+} from './_lib/metricoolMcp.js';
 
 const ALLOWED_STATUS = new Set(['draft', 'ready', 'scheduled', 'active', 'published', 'failed']);
 const ALLOWED_PLATFORMS = new Set(['instagram', 'tiktok', 'youtube', 'facebook']);
