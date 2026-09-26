@@ -5,8 +5,18 @@ const ROUTE_TYPES = new Set(['to','cc','bcc']);
 const EVENT_KEY = /^[a-z0-9_-]{1,60}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function requiredRoutes(config) {
+  if (Array.isArray(config.requiredRoutes) && config.requiredRoutes.length) return config.requiredRoutes;
+  return [{
+    eventKey: config.requiredEvent,
+    label: config.requiredLabel,
+    fallbackRouteId: config.fallbackRouteId,
+  }];
+}
+
 function normalizeRoutes(value, fallbackEmail, config) {
   const source = Array.isArray(value) ? value : [];
+  const required = requiredRoutes(config);
   const routes = source
     .slice(0, 50)
     .filter(route => clean(route?.email, 320))
@@ -30,24 +40,28 @@ function normalizeRoutes(value, fallbackEmail, config) {
 
   const fallback = clean(fallbackEmail, 320).toLowerCase();
   if (!routes.length && EMAIL.test(fallback)) {
-    routes.push({
-      id: config.fallbackRouteId,
-      eventKey: config.requiredEvent,
-      recipientType: 'to',
-      email: fallback,
-      enabled: true,
-    });
+    for (const requirement of required) {
+      routes.push({
+        id: requirement.fallbackRouteId || `${requirement.eventKey}-primary`,
+        eventKey: requirement.eventKey,
+        recipientType: 'to',
+        email: fallback,
+        enabled: true,
+      });
+    }
   }
 
-  const hasRequiredTo = routes.some(route =>
-    route.enabled
-    && route.eventKey === config.requiredEvent
-    && route.recipientType === 'to'
-    && route.email
-  );
+  for (const requirement of required) {
+    const hasRequiredTo = routes.some(route =>
+      route.enabled
+      && route.eventKey === requirement.eventKey
+      && route.recipientType === 'to'
+      && route.email
+    );
 
-  if (!hasRequiredTo) {
-    throw new Error(`Add at least one enabled ${config.requiredLabel} recipient using To.`);
+    if (!hasRequiredTo) {
+      throw new Error(`Add at least one enabled ${requirement.label} recipient using To.`);
+    }
   }
 
   return routes;
@@ -89,9 +103,10 @@ export async function saveEmailSettings(accessToken, config, body) {
   if (!EMAIL.test(fromEmail)) throw new Error('Enter a valid From email address.');
 
   const routes = normalizeRoutes(body.notificationRoutes, body.notificationEmail, config);
+  const primaryRequirement = requiredRoutes(config)[0];
   const primaryEmail = routes.find(route =>
     route.enabled
-    && route.eventKey === config.requiredEvent
+    && route.eventKey === primaryRequirement.eventKey
     && route.recipientType === 'to'
   )?.email || '';
 
