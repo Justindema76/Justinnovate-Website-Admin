@@ -5,9 +5,10 @@ import { SITE_KEYS } from '../../_shared/siteRegistry.js';
 
 const CONFIG = {
   siteKey: SITE_KEYS.JUSTIN,
-  requiredEvent: 'service_request',
-  requiredLabel: 'Service Requests',
-  fallbackRouteId: 'service-primary',
+  requiredRoutes: [
+    { eventKey: 'service_request', label: 'Service Requests', fallbackRouteId: 'service-primary' },
+    { eventKey: 'hiring_contact', label: 'Hiring Contacts', fallbackRouteId: 'hiring-primary' },
+  ],
   defaultFromName: 'Justin DeMatteis',
 };
 
