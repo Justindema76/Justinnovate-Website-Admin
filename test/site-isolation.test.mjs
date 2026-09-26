@@ -95,3 +95,56 @@ test('site listing exposes exactly the two configured websites', async () => {
     ['justconsignin', 'justindematteis'],
   );
 });
+
+test('Justin page storage queries are hard-scoped to JustinDeMatteis', async () => {
+  const calls = installFetchRecorder([]);
+  const { default: handler } = await import('../api/admin/justindematteis/pages.js');
+  const res = responseRecorder();
+
+  await handler({
+    method: 'GET',
+    headers: { authorization: 'Bearer token' },
+    query: { pageId: 'contact' },
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  const pageCalls = calls.filter(call =>
+    call.url.includes('/rest/v1/site_page_drafts?')
+    || call.url.includes('/rest/v1/site_pages?')
+  );
+  assert.equal(pageCalls.length, 2);
+  for (const call of pageCalls) {
+    assert.match(call.url, /site_key=eq\.justindematteis/);
+    assert.doesNotMatch(call.url, /site_key=eq\.justconsignin/);
+  }
+});
+
+test('JustConsignIn page storage queries are hard-scoped to JustConsignIn', async () => {
+  const calls = installFetchRecorder([]);
+  const { default: handler } = await import('../api/admin/justconsignin/pages.js');
+  const res = responseRecorder();
+
+  await handler({
+    method: 'GET',
+    headers: { authorization: 'Bearer token' },
+    query: { pageId: 'home' },
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  const pageCalls = calls.filter(call =>
+    call.url.includes('/rest/v1/site_page_drafts?')
+    || call.url.includes('/rest/v1/site_pages?')
+  );
+  assert.equal(pageCalls.length, 2);
+  for (const call of pageCalls) {
+    assert.match(call.url, /site_key=eq\.justconsignin/);
+    assert.doesNotMatch(call.url, /site_key=eq\.justindematteis/);
+  }
+});
+
+test('media prefixes are different for the two sites', async () => {
+  const { mediaPrefix } = await import('../api/_shared/siteAssets.js');
+  assert.equal(mediaPrefix('justindematteis'), 'justindematteis/');
+  assert.equal(mediaPrefix('justconsignin'), 'justconsignin/');
+  assert.notEqual(mediaPrefix('justindematteis'), mediaPrefix('justconsignin'));
+});
