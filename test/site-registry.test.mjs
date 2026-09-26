@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { getSite, listSites, SITE_KEYS } from '../api/_shared/siteRegistry.js';
+
+test('exactly two websites are registered', () => {
+  const sites = listSites();
+  assert.equal(sites.length, 2);
+  assert.deepEqual(
+    sites.map(site => site.key).sort(),
+    [SITE_KEYS.JUSTIN, SITE_KEYS.JUSTCONSIGNIN].sort(),
+  );
+});
+
+test('Justin and JustConsignIn have separate feature ownership', () => {
+  const justin = getSite(SITE_KEYS.JUSTIN);
+  const consign = getSite(SITE_KEYS.JUSTCONSIGNIN);
+
+  assert.ok(justin.features.includes('service-requests'));
+  assert.ok(justin.features.includes('hiring-contacts'));
+  assert.ok(!consign.features.includes('service-requests'));
+  assert.ok(!consign.features.includes('hiring-contacts'));
+
+  assert.ok(consign.features.includes('demo-requests'));
+  assert.ok(consign.features.includes('beta-partners'));
+  assert.ok(!justin.features.includes('demo-requests'));
+  assert.ok(!justin.features.includes('beta-partners'));
+});
