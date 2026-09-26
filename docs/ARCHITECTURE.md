@@ -1,93 +1,144 @@
 # Justinnovate Website Admin — Backend Architecture
 
-## Non-negotiable rule
+## Rule
 
-This repository runs one admin product for **two separate websites**. Shared code is allowed only for infrastructure and reusable primitives. Site ownership is explicit and server-side.
+One admin product supports **two separate websites**. Site ownership is explicit in the server route. Shared code contains infrastructure only.
+
+## Namespaces
 
 ### JustinDeMatteis.com
 
-API namespace:
-
 `/api/admin/justindematteis/*`
 
-Owned backend modules:
+Owns:
 
+- project / quote intake workflow
 - Service Requests
-- Service Request department assignment
-- Hiring Contacts
+- Service Request email history
+- department assignment
 - Departments
-- Pages
-- Global Styles
-- Header / Footer / Project Request global sections
+- Hiring Contacts / recruitment
+- Justin-specific content: Work Posts and AI Posts
+- Justin website pages/settings/global sections
+- Justin email routing
+- Justin videos/media/social links
 
 ### JustConsignIn.com
 
-API namespace:
-
 `/api/admin/justconsignin/*`
 
-Owned backend modules:
+Owns:
 
 - Demo Requests
+- Demo scheduling
+- Demo email history
 - Beta Partners
-- Pages
-- Global Styles
-- Header / Footer global sections
+- JustConsignIn social automation
+- Social AI
+- Metricool
+- JustConsignIn website pages/settings/global sections
+- JustConsignIn email routing
+- JustConsignIn videos/media/social links
+
+The current Outreach Map is intentionally classified as `outreach-static`: the existing feature is hard-coded plus browser local storage and has no server-side data source to migrate.
 
 ## Shared backend
 
-`/api/_shared/*` is restricted to infrastructure that is truly shared:
+`/api/_shared/*` may contain only reusable infrastructure:
 
-- owner authentication
-- Supabase user-token access
-- request validation
-- site registry
-- reusable page/settings data functions
+- `auth.js`
+- `supabase.js`
+- `http.js`
+- `siteRegistry.js`
+- `siteContent.js`
+- `siteAssets.js`
+- `contentPosts.js`
+- `emailSettings.js`
 
-Shared modules must not contain JustinDeMatteis or JustConsignIn business workflows.
+Business-specific integrations must live inside the owning website namespace. Metricool therefore lives under:
+
+`/api/admin/justconsignin/_lib/*`
 
 ## Site isolation
 
-A browser does **not** send `?site=...` to a generic endpoint.
+The browser never decides website ownership with a request value such as:
 
-Instead, the route itself owns the site:
+`?site=justindematteis`
+
+Instead, the route owns the site:
 
 - `/api/admin/justindematteis/service-requests`
 - `/api/admin/justconsignin/demo-requests`
 
-That prevents a frontend bug from accidentally querying or mutating the other website's data.
+Every site-scoped database query additionally filters by the server-owned site key when the underlying table has `site_key`.
 
-## Supabase security
+## Authentication and Supabase
 
-Admin API calls use:
+Admin routes require the configured owner Google identity.
 
-- the authenticated owner's access token
-- the Supabase publishable/anon key
+Ordinary admin CRUD uses:
+
+- authenticated owner JWT
+- Supabase publishable/anon key
 - database RLS
 
-The new backend does **not** depend on `SUPABASE_SECRET_KEY` or a service-role key for ordinary admin CRUD.
+The new admin JavaScript does not use `SUPABASE_SECRET_KEY`.
+
+Email delivery that legitimately requires privileged server execution remains inside the existing Supabase Edge Function. The source is versioned in this repository under:
+
+`supabase/functions/send-site-email/index.ts`
+
+## Email routing
+
+Email settings are separated by website.
+
+JustinDeMatteis.com validates that enabled **To** routes exist for:
+
+- Service Requests
+- Hiring Contacts
+
+JustConsignIn validates an enabled **To** route for:
+
+- Demo Requests
+
+## Media
+
+New media is designed to use site-owned storage prefixes:
+
+- `justindematteis/...`
+- `justconsignin/...`
+
+The media API only lists/deletes paths inside its own prefix. Existing legacy URLs remain valid and are not rewritten automatically.
+
+Large uploads should continue going directly from the authenticated admin client to Supabase Storage rather than being proxied through a Vercel serverless request.
+
+## Database migrations
+
+Historical structural migrations needed by the new backend are versioned in `supabase/migrations`.
+
+The old migration that restored broad service-role permissions is deliberately excluded because this architecture does not use a service-role secret for normal admin CRUD.
 
 ## Automated guardrails
 
-`npm run check` performs:
+`npm run check` runs:
 
 1. architecture validation
-2. cross-site reference checks
-3. rejection of request-controlled site selection
-4. rejection of service-role secret usage
-5. JavaScript syntax checks
-6. Node tests
+2. required-file validation
+3. cross-site reference validation
+4. no mixed root admin endpoints
+5. no request-controlled site selection
+6. no service-role secret dependency
+7. JavaScript syntax checks
+8. Node runtime tests
 
-GitHub Actions runs these checks on every push and pull request.
+GitHub Actions runs the same checks on every push and pull request.
 
-## Migration policy
+## Release rule
 
-The existing live Website Admin repository is a source/reference only while this rebuild is being developed.
+Do not switch the production Website Admin to this repository until:
 
-Nothing in production is switched to this repository until:
-
-1. the backend is complete enough for the chosen test scope;
-2. checks pass;
-3. a separate test deployment works;
-4. Justin reviews the code and UI;
-5. the switch is explicitly approved.
+1. backend checks pass;
+2. a separate test deployment is created;
+3. the admin frontend is built against these new routes;
+4. Justin reviews the code and tests both website contexts;
+5. the production switch is explicitly approved.
