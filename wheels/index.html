@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Wheels Dashboard</title>
+  <link rel="stylesheet" href="./wheels.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-mark">W</div><div><strong>Wheels</strong><span>Sales & Referral Admin</span></div></div>
+    <nav class="nav" aria-label="Wheels">
+      <button class="nav-item active" data-view="dashboard"><span>⌂</span> Dashboard</button>
+      <button class="nav-item" data-view="campaigns"><span>◫</span> Campaigns</button>
+      <button class="nav-item" data-view="links"><span>↗</span> Tracking Links</button>
+      <button class="nav-item" data-view="qr"><span>▦</span> QR Codes</button>
+      <button class="nav-item" data-view="referrals"><span>◎</span> Referrals</button>
+      <button class="nav-item" data-view="customers"><span>♙</span> Customers</button>
+    </nav>
+    <div class="sidebar-note"><strong>Wheels workspace</strong><span>Independent from the other website dashboards.</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileMenu" aria-label="Open menu">☰</button>
+      <div class="page-title"><span class="eyebrow">Admin Dashboard</span><h1 id="viewTitle">Wheels</h1></div>
+      <div class="switcher-wrap">
+        <label for="dashboardSwitcher">Dashboard</label>
+        <select id="dashboardSwitcher" aria-label="Switch dashboard">
+          <option value="justindematteis">JustinDeMatteis.com</option>
+          <option value="justconsignin">JustConsignIn.com</option>
+          <option value="wheels" selected>Wheels</option>
+        </select>
+      </div>
+    </header>
+
+    <section class="content">
+      <div class="view active" id="view-dashboard">
+        <div class="hero">
+          <div><span class="pill">Wheels</span><h2>Sales & Referral Dashboard</h2><p>Track the business you generate for Wheels from one place.</p></div>
+          <button class="primary" data-go="campaigns">Create Campaign</button>
+        </div>
+        <div class="metrics">
+          <article class="metric"><span>Campaigns</span><strong>0</strong><small>No campaigns yet</small></article>
+          <article class="metric"><span>Link Clicks</span><strong>0</strong><small>Tracking starts later</small></article>
+          <article class="metric"><span>Referrals</span><strong>0</strong><small>No referrals linked yet</small></article>
+          <article class="metric"><span>Customers</span><strong>0</strong><small>No customers linked yet</small></article>
+        </div>
+        <div class="grid-two">
+          <article class="panel"><div class="panel-head"><div><h3>Referral Funnel</h3><p>Your future customer journey at a glance.</p></div></div>
+            <div class="funnel"><div><strong>0</strong><span>Clicks</span></div><b>→</b><div><strong>0</strong><span>Referrals</span></div><b>→</b><div><strong>0</strong><span>Customers</span></div></div>
+          </article>
+          <article class="panel"><div class="panel-head"><div><h3>Quick Access</h3><p>Jump directly into a Wheels workspace.</p></div></div>
+            <div class="quick"><button data-go="campaigns">Campaigns <span>→</span></button><button data-go="links">Tracking Links <span>→</span></button><button data-go="qr">QR Codes <span>→</span></button></div>
+          </article>
+        </div>
+        <article class="panel"><div class="panel-head"><div><h3>Recent Activity</h3><p>Campaign, referral and customer activity will appear here.</p></div></div><div class="empty"><div class="empty-icon">↗</div><strong>No activity yet</strong><span>The dashboard shell is ready. Tracking data has not been connected.</span></div></article>
+      </div>
+
+      <div class="view" id="view-campaigns"><div class="section-head"><div><h2>Campaigns</h2><p>Organize where your Wheels referrals come from.</p></div><button class="primary" disabled>New Campaign</button></div><div class="empty-card"><div class="empty-icon">◫</div><h3>No campaigns yet</h3><p>Campaign creation will be connected when we build the tracking layer.</p></div></div>
+      <div class="view" id="view-links"><div class="section-head"><div><h2>Tracking Links</h2><p>Links that pass through your tracker before sending visitors to Wheels.</p></div></div><div class="empty-card"><div class="empty-icon">↗</div><h3>No tracking links yet</h3><p>Your campaign links will live here.</p></div></div>
+      <div class="view" id="view-qr"><div class="section-head"><div><h2>QR Codes</h2><p>QR codes for catalogs, cards and campaign handouts.</p></div></div><div class="empty-card"><div class="empty-icon">▦</div><h3>No QR codes yet</h3><p>QR codes will be generated from Wheels tracking links.</p></div></div>
+      <div class="view" id="view-referrals"><div class="section-head"><div><h2>Referrals</h2><p>See people and companies attributed to your Wheels activity.</p></div></div><div class="empty-card"><div class="empty-icon">◎</div><h3>No referrals yet</h3><p>Referral records will appear here after tracking is connected.</p></div></div>
+      <div class="view" id="view-customers"><div class="section-head"><div><h2>Customers</h2><p>Wheels customers connected to your referral activity.</p></div></div><div class="empty-card"><div class="empty-icon">♙</div><h3>No customers linked yet</h3><p>Customer matching will be added after the Wheels registration integration.</p></div></div>
+    </section>
+  </main>
+</div>
+<div class="scrim" id="scrim"></div>
+<script src="./wheels.js"></script>
+</body>
+</html>
