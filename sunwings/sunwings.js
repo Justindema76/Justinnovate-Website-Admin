@@ -2,7 +2,7 @@ const API={
   services:'/api/admin/sunwings/services',
   locations:'/api/admin/sunwings/locations',
   quotes:'/api/admin/sunwings/quote-requests',
-  settings:'/api/admin/sunwings/site-settings',
+  settings:'/api/admin/sunwings/site-settings',\n  integrations:'/api/admin/sunwings/integrations',
 };
 
 const state={
@@ -11,7 +11,7 @@ const state={
   quotes:[],
   service:null,
   location:null,
-  faq:[],
+  faq:[],\n  integrations:{},
 };
 
 const views={
@@ -21,7 +21,7 @@ const views={
   locations:'Location Posts',
   'location-editor':'Location Post',
   quotes:'Quote Requests',
-  settings:'Website Settings',
+  settings:'Website Settings',\n  integrations:'Integrations',
 };
 
 const nav=[...document.querySelectorAll('.nav-item')];
@@ -233,9 +233,60 @@ async function saveSettings(){
   notice('Sunwings settings saved.');
 }
 
-async function initialLoad(){
+
+function integrationForm(provider){return document.getElementById(provider==='google_reviews'?'googleIntegrationForm':'facebookIntegrationForm')}
+function integrationPrefix(provider){return provider==='google_reviews'?'google':'facebook'}
+function setIntegrationForm(provider,item={}){
+  const form=integrationForm(provider), config=item.config||{}, prefix=integrationPrefix(provider);
+  Object.entries(config).forEach(([key,value])=>{if(byName(form,key))byName(form,key).value=String(value??'')});
+  byName(form,'enabled').checked=Boolean(item.enabled);
+  const secretKey=provider==='google_reviews'?'api_key':'page_access_token';
+  document.getElementById(prefix+'SecretState').textContent=item.secretConfigured?.[secretKey]?'Saved securely · enter a new value only to replace it':provider==='google_reviews'?'No key saved':'No token saved';
+  const status=document.getElementById(prefix+'Status');
+  status.textContent=item.last_test_ok===true?'Connected':item.last_test_ok===false?'Connection failed':'Not tested';
+  status.className='connection-badge '+(item.last_test_ok===true?'connected':item.last_test_ok===false?'failed':'');
+  document.getElementById(prefix+'Detail').textContent=item.last_test_message||(item.last_tested_at?'Last tested '+date(item.last_tested_at):'Enter the required information, then test the connection.');
+}
+async function loadIntegrations(){
+  const payload=await api(API.integrations);
+  state.integrations=Object.fromEntries((payload.integrations||[]).map(item=>[item.provider,item]));
+  setIntegrationForm('google_reviews',state.integrations.google_reviews||{});
+  setIntegrationForm('facebook',state.integrations.facebook||{});
+}
+function integrationPayload(provider,action){
+  const form=integrationForm(provider), values=readForm(form);
+  const secretKey=provider==='google_reviews'?'api_key':'page_access_token';
+  const config={...values}; delete config[secretKey]; delete config.enabled;
+  return {provider,action,enabled:byName(form,'enabled').checked,config,secrets:{[secretKey]:values[secretKey]||''}};
+}
+function renderIntegrationPreview(provider,preview){
+  const prefix=integrationPrefix(provider), target=document.getElementById(prefix+'Preview');
+  if(!preview){target.classList.add('hidden');target.innerHTML='';return}
+  if(provider==='google_reviews'){
+    const reviews=Array.isArray(preview.reviews)?preview.reviews.slice(0,3):[];
+    target.innerHTML='<strong>Live test preview</strong><small>'+escapeHtml(preview.displayName?.text||'Google business')+' · '+escapeHtml(String(preview.rating||'—'))+' stars · '+escapeHtml(String(preview.userRatingCount||0))+' ratings</small>'+reviews.map(r=>'<p>★ '+escapeHtml(r.authorAttribution?.displayName||'Reviewer')+': '+escapeHtml((r.text?.text||'').slice(0,180))+'</p>').join('');
+  }else{
+    const posts=preview.posts?.data||[];
+    target.innerHTML='<strong>Live test preview</strong><small>'+escapeHtml(preview.name||'Facebook Page')+'</small>'+posts.slice(0,3).map(p=>'<p>'+escapeHtml((p.message||'Post with media').slice(0,220))+'</p>').join('');
+  }
+  target.classList.remove('hidden');
+}
+async function saveIntegration(provider,action='save'){
+  const button=document.querySelector(action==='test'?\`[data-integration-test="\${provider}"]\`:\`[data-integration-save="\${provider}"]\`);
+  const original=button.textContent; button.disabled=true; button.textContent=action==='test'?'Testing…':'Saving…';
   try{
-    await Promise.all([loadServices(),loadLocations(),loadQuotes(),loadSettings()]);
+    const payload=await api(API.integrations,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(integrationPayload(provider,action))});
+    state.integrations[provider]=payload.integration;
+    setIntegrationForm(provider,payload.integration);
+    renderIntegrationPreview(provider,payload.preview);
+    const secretKey=provider==='google_reviews'?'api_key':'page_access_token';
+    byName(integrationForm(provider),secretKey).value='';
+    notice(action==='test'?'Connection successful.':'Integration settings saved.');
+  }finally{button.disabled=false;button.textContent=original}
+}
+\nasync function initialLoad(){
+  try{
+    await Promise.all([loadServices(),loadLocations(),loadQuotes(),loadSettings(),loadIntegrations()]);
   }catch(error){
     notice(error.message,'error');
   }
@@ -252,7 +303,7 @@ document.getElementById('saveService').addEventListener('click',saveService);
 document.getElementById('saveLocation').addEventListener('click',saveLocation);
 document.getElementById('serviceForm').addEventListener('submit',event=>{event.preventDefault();saveService().catch(error=>notice(error.message,'error'))});
 document.getElementById('locationForm').addEventListener('submit',event=>{event.preventDefault();saveLocation().catch(error=>notice(error.message,'error'))});
-document.getElementById('saveSettings').addEventListener('click',()=>saveSettings().catch(error=>notice(error.message,'error')));
+document.getElementById('saveSettings').addEventListener('click',()=>saveSettings().catch(error=>notice(error.message,'error')));\ndocument.querySelectorAll('[data-integration-save]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationSave,'save').catch(error=>notice(error.message,'error'))));\ndocument.querySelectorAll('[data-integration-test]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationTest,'test').catch(error=>notice(error.message,'error'))));
 
 document.getElementById('serviceList').addEventListener('click',event=>{
   const id=event.target.closest('[data-edit-services]')?.dataset.editServices;
