@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <title>Sunwings Transport Admin</title>
+  <link rel="stylesheet" href="./sunwings.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SW</div>
+      <div><strong>Sunwings Transport</strong><span>Website Admin</span></div>
+    </div>
+
+    <nav class="nav" aria-label="Sunwings">
+      <button class="nav-item active" data-view="dashboard"><span>⌂</span> Dashboard</button>
+      <button class="nav-item" data-view="services"><span>▤</span> Service Posts</button>
+      <button class="nav-item" data-view="locations"><span>⌖</span> Location Posts</button>
+      <button class="nav-item" data-view="quotes"><span>✉</span> Quote Requests</button>
+      <button class="nav-item" data-view="settings"><span>⚙</span> Website Settings</button>
+    </nav>
+
+    <div class="sidebar-note">
+      <strong>Sunwings only</strong>
+      <span>No JustinDeMatteis, JustConsignIn or Wheels content is loaded here.</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileMenu" aria-label="Open menu">☰</button>
+      <div class="page-title">
+        <span class="eyebrow">Sunwings Transport</span>
+        <h1 id="viewTitle">Dashboard</h1>
+      </div>
+      <a class="view-site" href="https://sunwingstransport.ca" target="_blank" rel="noreferrer">View Website ↗</a>
+    </header>
+
+    <section class="content">
+      <div class="alert hidden" id="alert"></div>
+
+      <div class="view active" id="view-dashboard">
+        <div class="hero">
+          <div>
+            <span class="pill">Sunwings Transport</span>
+            <h2>Hamilton & Niagara Website Admin</h2>
+            <p>Manage service posts, location posts, quote requests and site settings.</p>
+          </div>
+          <button class="primary" data-go="services">Add Service Post</button>
+        </div>
+
+        <div class="metrics">
+          <article class="metric"><span>Services</span><strong id="metricServices">—</strong><small>Published + drafts</small></article>
+          <article class="metric"><span>Locations</span><strong id="metricLocations">—</strong><small>Published + drafts</small></article>
+          <article class="metric"><span>New Quotes</span><strong id="metricQuotes">—</strong><small>Waiting for follow-up</small></article>
+        </div>
+
+        <div class="grid-two">
+          <article class="panel">
+            <div class="panel-head"><div><h3>Content Structure</h3><p>Posts drive the public Sunwings site.</p></div></div>
+            <div class="quick">
+              <button data-go="services">Service Posts <span>→</span></button>
+              <button data-go="locations">Location Posts <span>→</span></button>
+              <button data-go="settings">Homepage Banner & Settings <span>→</span></button>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><h3>SEO Workflow</h3><p>Every post has its own slug, page content and SEO fields.</p></div></div>
+            <ul class="plain-list">
+              <li>Draft or publish independently</li>
+              <li>Reusable page template</li>
+              <li>Dedicated banner content</li>
+              <li>SEO title and meta description</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+
+      <div class="view" id="view-services">
+        <div class="section-head">
+          <div><span class="eyebrow">Content</span><h2>Service Posts</h2><p>Create one structured post for each Sunwings service.</p></div>
+          <button class="primary" id="newService">New Service Post</button>
+        </div>
+        <div class="post-list" id="serviceList"></div>
+      </div>
+
+      <div class="view" id="view-service-editor">
+        <div class="section-head">
+          <div><span class="eyebrow">Service Post</span><h2 id="serviceEditorTitle">New Service Post</h2><p>Everything entered here feeds the public service page template.</p></div>
+          <div class="actions">
+            <button class="secondary" data-go="services">← Service Posts</button>
+            <button class="primary" id="saveService">Save Service</button>
+          </div>
+        </div>
+        <form id="serviceForm" class="editor-grid">
+          <div class="editor-main">
+            <section class="panel form-panel">
+              <h3>1. Post Information</h3>
+              <div class="form-grid">
+                <label class="wide">Service Name<input name="title" required></label>
+                <label>URL Slug<input name="slug" required><small>/services/<span data-preview="service-slug">service-name</span></small></label>
+                <label>Sort Order<input name="sortOrder" type="number" value="0"></label>
+                <label class="wide">Eyebrow<input name="eyebrow" placeholder="Residential Services"></label>
+              </div>
+            </section>
+
+            <section class="panel form-panel">
+              <h3>2. Banner</h3>
+              <div class="form-grid">
+                <label class="wide">Banner Image URL<input name="bannerImage" placeholder="https://..."></label>
+                <label class="wide">Banner Image Alt Text<input name="bannerAlt"></label>
+                <label class="wide">Banner H1<input name="heroTitle"></label>
+                <label class="wide">Banner Description<textarea name="heroDescription" rows="4"></textarea></label>
+              </div>
+            </section>
+
+            <section class="panel form-panel">
+              <h3>3. Main Content</h3>
+              <div class="form-grid">
+                <label class="wide">Opening / Intro<textarea name="intro" rows="5"></textarea></label>
+                <label class="wide">Page Content HTML<textarea name="bodyHtml" rows="12" placeholder="<h2>...</h2>"></textarea></label>
+                <label class="wide">Service Points <small>One per line</small><textarea name="bullets" rows="7"></textarea></label>
+              </div>
+            </section>
+
+            <section class="panel form-panel">
+              <h3>4. CTA</h3>
+              <div class="form-grid">
+                <label class="wide">CTA Heading<input name="ctaTitle"></label>
+                <label class="wide">CTA Copy<textarea name="ctaText" rows="4"></textarea></label>
+              </div>
+            </section>
+          </div>
+
+          <aside class="editor-side">
+            <section class="panel side-panel">
+              <h3>Publishing</h3>
+              <label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label>
+              <button class="primary full" type="submit">Save Service</button>
+            </section>
+            <section class="panel side-panel">
+              <h3>SEO</h3>
+              <label>SEO Title<input name="seoTitle"></label>
+              <label>Meta Description<textarea name="seoDescription" rows="5"></textarea></label>
+              <label>Social Image URL<input name="ogImage"></label>
+            </section>
+            <section class="panel side-panel danger hidden" id="serviceDanger">
+              <h3>Danger Zone</h3>
+              <button class="danger-button full" type="button" id="deleteService">Delete Service</button>
+            </section>
+          </aside>
+        </form>
+      </div>
+
+      <div class="view" id="view-locations">
+        <div class="section-head">
+          <div><span class="eyebrow">Content</span><h2>Location Posts</h2><p>Create one structured post for each region, city or service area.</p></div>
+          <button class="primary" id="newLocation">New Location Post</button>
+        </div>
+        <div class="post-list" id="locationList"></div>
+      </div>
+
+      <div class="view" id="view-location-editor">
+        <div class="section-head">
+          <div><span class="eyebrow">Location Post</span><h2 id="locationEditorTitle">New Location Post</h2><p>Everything entered here feeds the public location page template.</p></div>
+          <div class="actions">
+            <button class="secondary" data-go="locations">← Location Posts</button>
+            <button class="primary" id="saveLocation">Save Location</button>
+          </div>
+        </div>
+        <form id="locationForm" class="editor-grid">
+          <div class="editor-main">
+            <section class="panel form-panel">
+              <h3>1. Location Information</h3>
+              <div class="form-grid">
+                <label class="wide">Location Name<input name="title" required></label>
+                <label>URL Slug<input name="slug" required><small>/locations/<span data-preview="location-slug">location-name</span></small></label>
+                <label>Region<input name="region" placeholder="Hamilton Region"></label>
+                <label>Sort Order<input name="sortOrder" type="number" value="0"></label>
+                <label class="wide">Eyebrow<input name="eyebrow"></label>
+              </div>
+            </section>
+
+            <section class="panel form-panel">
+              <h3>2. Banner</h3>
+              <div class="form-grid">
+                <label class="wide">Banner Image URL<input name="bannerImage" placeholder="https://..."></label>
+                <label class="wide">Banner Image Alt Text<input name="bannerAlt"></label>
+                <label class="wide">Banner H1<input name="heroTitle"></label>
+                <label class="wide">Banner Description<textarea name="heroDescription" rows="4"></textarea></label>
+              </div>
+            </section>
+
+            <section class="panel form-panel">
+              <h3>3. Local Content</h3>
+              <div class="form-grid">
+                <label class="wide">Opening / Intro<textarea name="intro" rows="5"></textarea></label>
+                <label class="wide">Page Content HTML<textarea name="bodyHtml" rows="12"></textarea></label>
+                <label class="wide">Areas / Neighbourhoods <small>One per line</small><textarea name="neighbourhoods" rows="7"></textarea></label>
+                <label class="wide">Available Service Slugs <small>One per line</small><textarea name="serviceSlugs" rows="7"></textarea></label>
+              </div>
+            </section>
+
+            <section class="panel form-panel">
+              <div class="panel-row"><div><h3>4. Frequently Asked Questions</h3><p>Add local questions individually.</p></div><button class="secondary" type="button" id="addFaq">Add FAQ</button></div>
+              <div id="faqList" class="faq-editor"></div>
+            </section>
+
+            <section class="panel form-panel">
+              <h3>5. CTA</h3>
+              <div class="form-grid">
+                <label class="wide">CTA Heading<input name="ctaTitle"></label>
+                <label class="wide">CTA Copy<textarea name="ctaText" rows="4"></textarea></label>
+              </div>
+            </section>
+          </div>
+
+          <aside class="editor-side">
+            <section class="panel side-panel">
+              <h3>Publishing</h3>
+              <label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label>
+              <button class="primary full" type="submit">Save Location</button>
+            </section>
+            <section class="panel side-panel">
+              <h3>SEO</h3>
+              <label>SEO Title<input name="seoTitle"></label>
+              <label>Meta Description<textarea name="seoDescription" rows="5"></textarea></label>
+              <label>Social Image URL<input name="ogImage"></label>
+            </section>
+            <section class="panel side-panel danger hidden" id="locationDanger">
+              <h3>Danger Zone</h3>
+              <button class="danger-button full" type="button" id="deleteLocation">Delete Location</button>
+            </section>
+          </aside>
+        </form>
+      </div>
+
+      <div class="view" id="view-quotes">
+        <div class="section-head">
+          <div><span class="eyebrow">Leads</span><h2>Quote Requests</h2><p>Requests sent from the Sunwings website.</p></div>
+        </div>
+        <div class="post-list" id="quoteList"></div>
+      </div>
+
+      <div class="view" id="view-settings">
+        <div class="section-head">
+          <div><span class="eyebrow">Website</span><h2>Sunwings Settings</h2><p>Homepage banner and core Sunwings contact settings.</p></div>
+          <button class="primary" id="saveSettings">Save Settings</button>
+        </div>
+        <form id="settingsForm" class="panel settings-form">
+          <label>Phone<input name="phone"></label>
+          <label>Email<input name="email" type="email"></label>
+          <label class="wide">Homepage Banner Image URL<input name="hero_image"></label>
+          <label class="wide">Homepage Banner H1<input name="hero_title"></label>
+          <label class="wide">Homepage Banner Description<textarea name="hero_description" rows="5"></textarea></label>
+          <label>Banner Button Text<input name="hero_cta_label"></label>
+          <label>Banner Button URL<input name="hero_cta_url"></label>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<script src="./sunwings.js"></script>
+</body>
+</html>
