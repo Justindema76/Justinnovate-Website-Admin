@@ -31,7 +31,7 @@ test('Sunwings owns only its transport website workflows', () => {
   const justin = getSite(SITE_KEYS.JUSTIN);
   const consign = getSite(SITE_KEYS.JUSTCONSIGNIN);
 
-  for (const feature of ['services','locations','quote-requests']) {
+  for (const feature of ['services','locations','quote-requests','site-settings']) {
     assert.ok(sunwings.features.includes(feature));
     assert.ok(!justin.features.includes(feature));
     assert.ok(!consign.features.includes(feature));
