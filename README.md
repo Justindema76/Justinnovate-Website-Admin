@@ -1,9 +1,10 @@
 # Justinnovate Website Admin
 
-Clean backend-first rebuild of the admin product for two **separate** websites:
+Clean backend-first rebuild of the admin product for separate managed websites:
 
 - JustinDeMatteis.com
 - JustConsignIn.com
+- SunwingsTransport.ca
 
 The existing production admin is not switched to this repository. This repo is built and tested independently first.
 
@@ -17,6 +18,7 @@ api/
   admin/
     justindematteis/
     justconsignin/
+    sunwings/
 ```
 
 There is no generic request-controlled `?site=` switch for site-specific CRUD.
@@ -58,6 +60,15 @@ There is no generic request-controlled `?site=` switch for site-specific CRUD.
 - Header / Footer global sections
 - Outreach remains a static/local admin dataset because the existing feature has no server backend
 
+## SunwingsTransport.ca backend
+
+- Service Posts
+- Location Posts
+- Quote Requests
+- Site / homepage banner settings
+
+Services and Locations follow the same draft/publish posting approach used by the content systems in the other managed sites.
+
 ## Shared backend
 
 Shared code is restricted to infrastructure and reusable data primitives:
@@ -93,7 +104,7 @@ CI validates:
 
 - required backend modules exist
 - JavaScript syntax
-- exactly two registered websites
+- registered website count and ownership
 - cross-site feature ownership
 - no mixed root admin endpoints
 - no request-controlled site selection
