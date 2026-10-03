@@ -69,6 +69,11 @@ function expectFile(path) {
   'api/admin/justconsignin/_lib/metricoolMcp.js',
   'api/admin/justconsignin/_lib/metricoolMcpCompat.js',
   'api/admin/justconsignin/_lib/metricoolMcpClient.js',
+
+  'api/admin/sunwings/_lib/content.js',
+  'api/admin/sunwings/services.js',
+  'api/admin/sunwings/locations.js',
+  'api/admin/sunwings/quote-requests.js',
 ].forEach(expectFile);
 
 const apiFiles = walk(join(root, 'api')).filter(file => file.endsWith('.js'));
@@ -97,8 +102,16 @@ for (const file of apiFiles) {
     failures.push(`${rel}: Justin route references JustConsignIn.`);
   }
 
-  if (rel.includes('api/admin/justconsignin/') && /SITE_KEYS\.JUSTIN\b|justindematteis/.test(source)) {
-    failures.push(`${rel}: JustConsignIn route references JustinDeMatteis.`);
+  if (rel.includes('api/admin/justconsignin/') && /SITE_KEYS\.JUSTIN\b|SITE_KEYS\.SUNWINGS\b|justindematteis|sunwings/.test(source)) {
+    failures.push(`${rel}: JustConsignIn route references another website namespace.`);
+  }
+
+  if (rel.includes('api/admin/justindematteis/') && /SITE_KEYS\.SUNWINGS\b|sunwings/.test(source)) {
+    failures.push(`${rel}: Justin route references Sunwings.`);
+  }
+
+  if (rel.includes('api/admin/sunwings/') && /SITE_KEYS\.JUSTIN\b|SITE_KEYS\.JUSTCONSIGNIN\b|justindematteis|justconsignin/.test(source)) {
+    failures.push(`${rel}: Sunwings route references another website namespace.`);
   }
 
   const syntax = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
@@ -114,7 +127,7 @@ if (failures.length) {
 }
 
 console.log(`Architecture validation passed for ${apiFiles.length} API files.`);
-console.log('Two-site isolation: OK');
+console.log('Three-site isolation: OK');
 console.log('No service-role secret dependency: OK');
 console.log('Server-owned site routing: OK');
 console.log('JavaScript syntax: OK');
