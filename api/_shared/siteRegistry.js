@@ -60,6 +60,7 @@ export const SITES = Object.freeze({
       'services',
       'locations',
       'quote-requests',
+      'site-settings',
     ]),
   }),
 });
