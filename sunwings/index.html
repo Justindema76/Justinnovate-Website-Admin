@@ -20,7 +20,7 @@
       <button class="nav-item" data-view="services"><span>▤</span> Service Posts</button>
       <button class="nav-item" data-view="locations"><span>⌖</span> Location Posts</button>
       <button class="nav-item" data-view="quotes"><span>✉</span> Quote Requests</button>
-      <button class="nav-item" data-view="settings"><span>⚙</span> Website Settings</button>
+      <button class="nav-item" data-view="settings"><span>⚙</span> Website Settings</button>\n      <button class="nav-item" data-view="integrations"><span>↻</span> Integrations</button>
     </nav>
 
     <div class="sidebar-note">
@@ -243,6 +243,42 @@
           <div><span class="eyebrow">Leads</span><h2>Quote Requests</h2><p>Requests sent from the Sunwings website.</p></div>
         </div>
         <div class="post-list" id="quoteList"></div>
+      </div>
+
+      <div class="view" id="view-integrations">
+        <div class="section-head">
+          <div><span class="eyebrow">Connections</span><h2>Sunwings Integrations</h2><p>Connect external services used only by the Sunwings website.</p></div>
+        </div>
+        <div class="integration-grid">
+          <form class="panel integration-card" id="googleIntegrationForm">
+            <div class="integration-head"><div><span class="provider-mark">G</span><div><h3>Google Reviews</h3><p>Pull business rating and review data from Google Places.</p></div></div><span class="connection-badge" id="googleStatus">Not tested</span></div>
+            <div class="form-grid">
+              <label class="wide">Google Place ID<input name="place_id" placeholder="Enter Place ID"></label>
+              <label>Reviews to display<input name="display_limit" type="number" min="1" max="10" value="3"></label>
+              <label>Minimum star rating<select name="minimum_rating"><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4" selected>4+</option><option value="5">5 only</option></select></label>
+              <label class="wide">Google Places API Key<input name="api_key" type="password" autocomplete="new-password" placeholder="Enter key or leave blank to keep saved key"><small id="googleSecretState">No key saved</small></label>
+            </div>
+            <label class="toggle-row"><input name="enabled" type="checkbox"><span>Enable Google Reviews on website</span></label>
+            <div class="integration-actions"><button class="secondary" type="button" data-integration-save="google_reviews">Save</button><button class="primary" type="button" data-integration-test="google_reviews">Save & Test Connection</button></div>
+            <div class="connection-detail" id="googleDetail">Enter the required information, then test the connection.</div>
+            <div class="integration-preview hidden" id="googlePreview"></div>
+          </form>
+
+          <form class="panel integration-card" id="facebookIntegrationForm">
+            <div class="integration-head"><div><span class="provider-mark">f</span><div><h3>Facebook Posts</h3><p>Pull recent posts from the connected Facebook Page.</p></div></div><span class="connection-badge" id="facebookStatus">Not tested</span></div>
+            <div class="form-grid">
+              <label>Facebook Page ID<input name="page_id" placeholder="Enter Page ID"></label>
+              <label>Graph API Version<input name="graph_version" placeholder="Example: vXX.X"></label>
+              <label>Posts to display<input name="display_limit" type="number" min="1" max="12" value="3"></label>
+              <label>Include posts without images<select name="include_text_only"><option value="true">Yes</option><option value="false">No</option></select></label>
+              <label class="wide">Page Access Token<input name="page_access_token" type="password" autocomplete="new-password" placeholder="Enter token or leave blank to keep saved token"><small id="facebookSecretState">No token saved</small></label>
+            </div>
+            <label class="toggle-row"><input name="enabled" type="checkbox"><span>Enable Facebook Posts on website</span></label>
+            <div class="integration-actions"><button class="secondary" type="button" data-integration-save="facebook">Save</button><button class="primary" type="button" data-integration-test="facebook">Save & Test Connection</button></div>
+            <div class="connection-detail" id="facebookDetail">Enter the required information, then test the connection.</div>
+            <div class="integration-preview hidden" id="facebookPreview"></div>
+          </form>
+        </div>
       </div>
 
       <div class="view" id="view-settings">
