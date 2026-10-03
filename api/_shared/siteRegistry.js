@@ -1,6 +1,7 @@
 export const SITE_KEYS = Object.freeze({
   JUSTIN: 'justindematteis',
   JUSTCONSIGNIN: 'justconsignin',
+  SUNWINGS: 'sunwings',
 });
 
 export const SITES = Object.freeze({
@@ -48,6 +49,18 @@ export const SITES = Object.freeze({
       'styles',
       'global-sections',
       'email-settings',
+    ]),
+  }),
+  [SITE_KEYS.SUNWINGS]: Object.freeze({
+    key: SITE_KEYS.SUNWINGS,
+    name: 'Sunwings Transport',
+    adminLabel: 'Sunwings Transport',
+    domain: 'sunwingstransport.ca',
+    features: Object.freeze([
+      'services',
+      'locations',
+      'quote-requests',
+      'site-settings',
     ]),
   }),
 });

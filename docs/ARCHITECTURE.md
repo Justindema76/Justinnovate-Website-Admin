@@ -2,7 +2,7 @@
 
 ## Rule
 
-One admin product supports **two separate websites**. Site ownership is explicit in the server route. Shared code contains infrastructure only.
+One admin product supports **multiple separate websites**. Site ownership is explicit in the server route. Shared code contains infrastructure only.
 
 ## Namespaces
 
@@ -41,6 +41,19 @@ Owns:
 - JustConsignIn videos/media/social links
 
 The current Outreach Map is intentionally classified as `outreach-static`: the existing feature is hard-coded plus browser local storage and has no server-side data source to migrate.
+
+### SunwingsTransport.ca
+
+`/api/admin/sunwings/*`
+
+Owns:
+
+- Service Posts
+- Location Posts
+- Quote Requests
+- Sunwings site / homepage banner settings
+
+The public Sunwings Next.js site reads only published service/location records and renders those records through reusable templates.
 
 ## Shared backend
 
@@ -107,6 +120,7 @@ New media is designed to use site-owned storage prefixes:
 
 - `justindematteis/...`
 - `justconsignin/...`
+- `sunwings/...`
 
 The media API only lists/deletes paths inside its own prefix. Existing legacy URLs remain valid and are not rewritten automatically.
 
