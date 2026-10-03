@@ -74,6 +74,7 @@ function expectFile(path) {
   'api/admin/sunwings/services.js',
   'api/admin/sunwings/locations.js',
   'api/admin/sunwings/quote-requests.js',
+  'api/admin/sunwings/site-settings.js',
 ].forEach(expectFile);
 
 const apiFiles = walk(join(root, 'api')).filter(file => file.endsWith('.js'));
