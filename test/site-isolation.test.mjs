@@ -82,7 +82,7 @@ test('JustConsignIn demo requests use only the demo request backend', async () =
   assert.ok(!calls.some(call => call.url.includes('/rest/v1/hiring_contacts?')));
 });
 
-test('site listing exposes exactly the two configured websites', async () => {
+test('site listing exposes exactly the three configured websites', async () => {
   installFetchRecorder([]);
   const { default: handler } = await import('../api/admin/sites.js');
   const res = responseRecorder();
@@ -92,7 +92,7 @@ test('site listing exposes exactly the two configured websites', async () => {
   assert.equal(res.statusCode, 200);
   assert.deepEqual(
     res.payload.sites.map(site => site.site_key).sort(),
-    ['justconsignin', 'justindematteis'],
+    ['justconsignin', 'justindematteis', 'sunwings'],
   );
 });
 
@@ -147,4 +147,33 @@ test('media prefixes are different for the two sites', async () => {
   assert.equal(mediaPrefix('justindematteis'), 'justindematteis/');
   assert.equal(mediaPrefix('justconsignin'), 'justconsignin/');
   assert.notEqual(mediaPrefix('justindematteis'), mediaPrefix('justconsignin'));
+});
+
+
+test('Sunwings service posts are hard-scoped to Sunwings', async () => {
+  const calls = installFetchRecorder([]);
+  const { default: handler } = await import('../api/admin/sunwings/services.js');
+  const res = responseRecorder();
+
+  await handler({ method: 'GET', headers: { authorization: 'Bearer token' } }, res);
+
+  assert.equal(res.statusCode, 200);
+  const restCall = calls.find(call => call.url.includes('/rest/v1/sunwings_services?'));
+  assert.ok(restCall, 'sunwings_services REST call was not made');
+  assert.match(restCall.url, /site_key=eq\.sunwings/);
+  assert.doesNotMatch(restCall.url, /justindematteis|justconsignin/);
+});
+
+test('Sunwings location posts are hard-scoped to Sunwings', async () => {
+  const calls = installFetchRecorder([]);
+  const { default: handler } = await import('../api/admin/sunwings/locations.js');
+  const res = responseRecorder();
+
+  await handler({ method: 'GET', headers: { authorization: 'Bearer token' } }, res);
+
+  assert.equal(res.statusCode, 200);
+  const restCall = calls.find(call => call.url.includes('/rest/v1/sunwings_locations?'));
+  assert.ok(restCall, 'sunwings_locations REST call was not made');
+  assert.match(restCall.url, /site_key=eq\.sunwings/);
+  assert.doesNotMatch(restCall.url, /justindematteis|justconsignin/);
 });
