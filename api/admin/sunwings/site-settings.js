@@ -12,7 +12,7 @@ const ALLOWED_KEYS = new Set([
   'hero_image',
   'hero_cta_label',
   'hero_cta_url',
-  'site_name','logo_url','topbar_enabled','topbar_emphasis','topbar_text','call_button_enabled','call_button_text',
+  'site_name','topbar_enabled','topbar_emphasis','topbar_text','call_button_enabled','call_button_text',
   'logo_desktop_width','logo_mobile_width','logo_desktop_max_height','logo_mobile_max_height',
   'logo_offset_x','logo_offset_y','header_desktop_height','header_mobile_height',
 ]);
