@@ -351,8 +351,26 @@
           <button class="primary" id="saveSettings">Save Settings</button>
         </div>
         <form id="settingsForm" class="panel settings-form">
+          <h3 class="wide">Header & Branding</h3>
+          <label>Business Name<input name="site_name" placeholder="Sun Wings"></label>
           <label>Phone<input name="phone"></label>
           <label>Email<input name="email" type="email"></label>
+          <label class="wide">Header Logo Image URL<input name="logo_url" placeholder="https://..."><small>Square images are supported and will not be stretched.</small></label>
+          <label>Desktop Logo Width (px)<input name="logo_desktop_width" type="number" min="40" max="400" value="140"></label>
+          <label>Mobile Logo Width (px)<input name="logo_mobile_width" type="number" min="40" max="300" value="170"></label>
+          <label>Desktop Logo Max Height (px)<input name="logo_desktop_max_height" type="number" min="40" max="220" value="100"></label>
+          <label>Mobile Logo Max Height (px)<input name="logo_mobile_max_height" type="number" min="40" max="180" value="90"></label>
+          <label>Logo Horizontal Position (px)<input name="logo_offset_x" type="number" min="-100" max="100" value="0"></label>
+          <label>Logo Vertical Position (px)<input name="logo_offset_y" type="number" min="-100" max="100" value="0"></label>
+          <label>Desktop Header Height (px)<input name="header_desktop_height" type="number" min="70" max="220" value="110"></label>
+          <label>Mobile Header Height (px)<input name="header_mobile_height" type="number" min="70" max="180" value="105"></label>
+          <label>Top Toolbar<select name="topbar_enabled"><option value="true">Show</option><option value="false">Hide</option></select></label>
+          <label>Call Button<select name="call_button_enabled"><option value="true">Show</option><option value="false">Hide</option></select></label>
+          <label class="wide">Toolbar Emphasis<input name="topbar_emphasis" placeholder="Reliable • On-Time • Professional"></label>
+          <label class="wide">Toolbar Text<input name="topbar_text" placeholder="Moving & delivery from Toronto to Niagara"></label>
+          <label>Call Button Text<input name="call_button_text" placeholder="Call Now"></label>
+          <div class="wide"><button class="secondary" type="button" id="resetHeaderSettings">Reset Header Defaults</button></div>
+          <h3 class="wide">Homepage Banner</h3>
           <label class="wide">Homepage Banner Image URL<input name="hero_image"></label>
           <label class="wide">Homepage Banner H1<input name="hero_title"></label>
           <label class="wide">Homepage Banner Description<textarea name="hero_description" rows="5"></textarea></label>
