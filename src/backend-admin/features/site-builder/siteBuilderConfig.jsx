@@ -1,0 +1,1892 @@
+import { useEffect, useState } from 'react';
+import { FieldLabel } from '@puckeditor/core';
+import { ArrowRight, BarChart3, ClipboardList, FileUp, Image as ImageIcon, Library, PackagePlus, ReceiptText, ScanBarcode, Smartphone, Store, Upload, Users, WalletCards } from 'lucide-react';
+import { useAuth } from '../../auth/AdminAuthContext';
+import MediaPickerModal from '../social-automation/components/MediaPickerModal';
+import { loadAdminMedia, loadAdminVideos, uploadSiteImage } from '../../services/siteAdminService';
+import { FALLBACK_VIDEOS } from '../../config/siteContent';
+
+function ImageLibraryField({ field, value, onChange }) {
+  const { accessToken } = useAuth();
+  const [media, setMedia] = useState([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const refresh = async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError('');
+    try {
+      const items = await loadAdminMedia(accessToken);
+      setMedia(items.filter(item => (item.mediaType || 'image') === 'image'));
+    } catch (err) {
+      setError(err.message || 'Unable to load media.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (pickerOpen && !media.length) refresh();
+  }, [pickerOpen, accessToken]);
+
+  const upload = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const url = await uploadSiteImage(accessToken, file);
+      onChange(url);
+      await refresh();
+    } catch (err) {
+      setError(err.message || 'Unable to upload image.');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  return <>
+    <FieldLabel label={field.label || 'Image'}>
+      <div className="jci-puck-image-field">
+        {value
+          ? <img src={value} alt="" className="jci-puck-image-thumb"/>
+          : <div className="jci-puck-image-empty"><ImageIcon size={22}/><span>No image selected</span></div>}
+        <input
+          className="jci-puck-url-input"
+          value={value || ''}
+          onChange={event => onChange(event.target.value)}
+          placeholder="https://example.com/path/image.png"
+          aria-label="External image URL"
+        />
+        <small className="jci-puck-image-help">Use an uploaded image, choose from Media, or paste any public image URL (WordPress/CDN URLs are supported).</small>
+        <div className="jci-puck-image-actions">
+          <button type="button" onClick={() => setPickerOpen(true)} disabled={loading}>
+            <Library size={14}/> {loading ? 'Loading…' : 'Choose Media'}
+          </button>
+          <label>
+            <Upload size={14}/> {uploading ? 'Uploading…' : 'Upload New'}
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={upload} disabled={uploading}/>
+          </label>
+        </div>
+        {error && <small className="jci-puck-field-error">{error}</small>}
+      </div>
+    </FieldLabel>
+    {pickerOpen && <MediaPickerModal
+      items={media}
+      onClose={() => setPickerOpen(false)}
+      onSelect={item => {
+        onChange(item.url);
+        setPickerOpen(false);
+      }}
+    />}
+  </>;
+}
+
+export const imageField = {
+  type: 'custom',
+  label: 'Image',
+  render: props => <ImageLibraryField {...props}/>,
+};
+
+const backgroundOptions = [
+  { label: 'White', value: 'white' },
+  { label: 'Light', value: 'light' },
+  { label: 'Dark', value: 'dark' },
+];
+
+const headingLevelOptions = [
+  { label: 'H1', value: 'h1' },
+  { label: 'H2', value: 'h2' },
+  { label: 'H3', value: 'h3' },
+  { label: 'H4', value: 'h4' },
+];
+
+const headingLevelField = { type: 'select', label: 'Heading level', options: headingLevelOptions };
+const JUSTIN_SHOWCASE_IMAGE = 'https://raw.githubusercontent.com/Justindema76/Justin-DeMatteis-Main-Site/main/public/images/projects/justconsignin-showcase.svg';
+
+function BlockHeading({ level = 'h2', className = '', children }) {
+  const Tag = ['h1','h2','h3','h4'].includes(level) ? level : 'h2';
+  return <Tag className={`${className} heading-level-${Tag}`.trim()}>{children}</Tag>;
+}
+
+const publicAsset = path => `https://www.justconsignin.com${path}`;
+
+function previewClick(event) {
+  event.preventDefault();
+}
+
+function HomeVideosPreview({ eyebrow = 'Watch the Shopify workflow', heading = 'See JustConsignIn in action.' }) {
+  const { accessToken } = useAuth();
+  const [videos, setVideos] = useState(FALLBACK_VIDEOS);
+
+  useEffect(() => {
+    let active = true;
+    if (!accessToken) return () => { active = false; };
+    loadAdminVideos(accessToken)
+      .then(rows => {
+        if (!active) return;
+        const homepage = rows.filter(video => video.status !== 'hidden' && video.placement === 'homepage');
+        setVideos(homepage.length ? homepage : FALLBACK_VIDEOS);
+      })
+      .catch(() => {
+        if (active) setVideos(FALLBACK_VIDEOS);
+      });
+    return () => { active = false; };
+  }, [accessToken]);
+
+  const regularVideos = videos.filter(video => video.contentType !== 'short' && video.youtubeId);
+  const shorts = videos.filter(video => video.contentType === 'short' && video.youtubeId);
+
+  return <div className="jci-public-preview">
+    <section className="home-video-section public-section" aria-labelledby="builder-home-video-heading">
+      <div className="section-heading">
+        <span>{eyebrow}</span>
+        <h2 id="builder-home-video-heading">{heading}</h2>
+      </div>
+      <div className="youtube-gallery">
+        {regularVideos.length > 0 && <section className="youtube-gallery-group" aria-label="YouTube videos">
+          <div className="youtube-gallery-group-title"><span>Videos</span></div>
+          <div className="home-video-grid">
+            {regularVideos.map(video => <div className="youtube-gallery-card" key={video.id || video.youtubeId}>
+              <iframe
+                src={`https://www.youtube.com/embed/${video.youtubeId}?rel=0&playsinline=1`}
+                title={video.title || 'JustConsignIn video'}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>)}
+          </div>
+        </section>}
+        {shorts.length > 0 && <section className="youtube-gallery-group shorts" aria-label="YouTube Shorts">
+          <div className="youtube-gallery-group-title"><span>Shorts</span></div>
+          <div className="home-shorts-grid">
+            {shorts.map(video => <div className="youtube-gallery-card short" key={video.id || video.youtubeId}>
+              <iframe
+                src={`https://www.youtube.com/embed/${video.youtubeId}?rel=0&playsinline=1`}
+                title={video.title || 'JustConsignIn short'}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>)}
+          </div>
+        </section>}
+      </div>
+    </section>
+  </div>;
+}
+
+const homeHeroDefaults = {
+  brandText: 'Consignment management built for Shopify stores',
+  eyebrow: 'JustConsignIn for Shopify',
+  heading: 'Create consignment products from your phone and sell them through Shopify.',
+  text: 'JustConsignIn connects consignors, inventory, Shopify products, POS sales and payouts in one workflow — without spreadsheets or duplicate entry.',
+  primaryButtonText: 'Open Shopify app demo',
+  primaryButtonUrl: '/shopify-app',
+  watchButtonText: 'Watch videos',
+  watchButtonUrl: '#home-video-heading',
+  partnerButtonText: 'Founding Partner Program',
+  partnerButtonUrl: '/partner-program',
+  note1: 'Create products from your phone',
+  note2: 'Shopify POS ready',
+  note3: 'Track consignor payouts',
+  panelTitle: 'Shopify connected',
+  panelSubtitle: 'Products · POS · Consignment',
+  panelDate: 'Today',
+  panelHeading: 'Consignment overview',
+  metric1Label: 'Consignors',
+  metric1Value: '24',
+  metric2Label: 'Available items',
+  metric2Value: '118',
+  metric3Label: 'Sales',
+  metric3Value: '$3,840',
+  metric4Label: 'Owed',
+  metric4Value: '$1,426',
+  person1Initials: 'SM',
+  person1Name: 'Sarah Miller',
+  person1Detail: '4 items · $84.00 due',
+  person1Percent: '60%',
+  person2Initials: 'DR',
+  person2Name: 'Daniel Reed',
+  person2Detail: '2 items · $35.00 due',
+  person2Percent: '50%',
+};
+
+const homeIntegrationDefaults = {
+  eyebrow: 'Built around Shopify',
+  heading: 'Intake, product creation and POS in one consignment workflow.',
+  text: 'Use JustConsignIn to manage the consignment details Shopify does not track on its own, while keeping the product and sale inside your Shopify workflow.',
+  card1Heading: 'Create Shopify products from your phone',
+  card1Text: 'Enter the consignor and item once, add the product details and photo, then create the Shopify product directly from intake.',
+  card2Heading: 'Sell consignment items at the point of sale',
+  card2Text: 'Publish items to Shopify POS and keep the consignment item tied back to the correct consignor when it sells.',
+  card3Heading: 'Know exactly what each consignor is owed',
+  card3Text: 'Track sold-unpaid items, commission splits, payouts and transaction history without maintaining a second spreadsheet.',
+};
+
+const homeLinksDefaults = {
+  link1Title: 'Shopify features',
+  link1Text: 'Products, POS, consignors, sales, payouts and reporting.',
+  link1Url: '/features',
+  link2Title: 'How it works',
+  link2Text: 'Follow the Shopify consignment workflow from intake through payout.',
+  link2Url: '/how-it-works',
+  link3Title: 'Open the Shopify app demo',
+  link3Text: 'Explore the JustConsignIn interface and connected workflow.',
+  link3Url: '/shopify-app',
+};
+
+const featuresHeroDefaults = {
+  brandText: 'Built for Shopify consignment stores',
+  eyebrow: 'Features',
+  heading: 'Move consignment inventory from intake to sale faster.',
+  text: 'JustConsignIn is built for Shopify store owners who process lots of unique consignment and resale inventory. Enter items quickly, create Shopify products without duplicate entry, track every sale back to the correct consignor and keep payouts organized in one workflow.',
+  image: '',
+  imageAlt: '',
+  imagePosition: 'right',
+};
+
+const featuresGridDefaults = {
+  eyebrow: 'Made for real resale workflows',
+  heading: 'When every item is different, intake speed matters.',
+  text: 'Traditional retail receives repeatable SKUs from suppliers. Consignment and resale stores often receive one-of-a-kind items in batches. JustConsignIn focuses on making that store-owner workflow faster and easier to manage from the moment inventory comes in.',
+  headingAlign: 'center',
+  cardAlign: 'left',
+  columns: '2',
+  background: 'light',
+  sectionImage: '',
+  sectionImagePosition: 'right',
+  item1Title: 'Built for high-volume resale inventory',
+  item1Text: 'JustConsignIn is designed for consignment and resale stores that receive lots of unique items. Move quickly from an item in hand to a complete consignment record without relying on paper notes or spreadsheets.',
+  item1Image: '',
+  item2Title: 'Consignor accounts',
+  item2Text: 'Keep contact details, commission split, notes, balances and every item connected to the correct consignor.',
+  item2Image: '',
+  item3Title: 'Fast mobile item intake',
+  item3Text: 'Create consignors and add items from your phone while you are receiving inventory. Enter the item once, add product details and photos, and keep the intake process moving.',
+  item3Image: '',
+  item4Title: 'Create Shopify products without duplicate entry',
+  item4Text: 'Turn a consignment item into a Shopify product without typing the same information into a second system. Publish to Shopify POS and choose whether the item should also be available online.',
+  item4Image: '',
+  item5Title: 'Shopify POS, online and manual sales tracking',
+  item5Text: 'Keep each consignment item tied to the correct consignor whether it sells in-store through Shopify POS, through your Shopify online store, or through a manual sale workflow.',
+  item5Image: '',
+  item6Title: 'Payout management',
+  item6Text: 'See sold-unpaid items, calculate the consignor share and record payouts while preserving the full sale and payout history.',
+  item6Image: '',
+  item7Title: 'Reports and transactions',
+  item7Text: 'Review sales, consignor earnings, payout history and transaction activity from the same workspace so you always know what sold and what is still owed.',
+  item7Image: '',
+  item8Title: 'Import and export for larger inventories',
+  item8Text: 'Bulk import consignors and items from CSV and keep downloadable data tools available when you are moving existing inventory into JustConsignIn or maintaining your own records.',
+  item8Image: '',
+};
+
+const featuresAudienceDefaults = {
+  eyebrow: 'Who JustConsignIn is for',
+  heading: 'Shopify stores with a lot of unique resale inventory to enter and track.',
+  text: 'The common problem is volume: many individual items, many consignors and a constant need to know who owns what, what sold and what each person is owed.',
+  headingAlign: 'center',
+  cardAlign: 'left',
+  columns: '2',
+  background: 'light',
+  sectionImage: '',
+  sectionImagePosition: 'right',
+  item1Title: 'Consignment & resale shops',
+  item1Text: 'Stores taking in a steady flow of one-of-a-kind inventory from consignors.',
+  item1Image: '',
+  item2Title: 'Secondhand & thrift-style stores',
+  item2Text: 'Shops using Shopify that need a faster way to enter and manage large amounts of resale inventory tied to individual consignors.',
+  item2Image: '',
+  item3Title: 'Children’s & family resale',
+  item3Text: 'Clothing, toys, baby gear and other categories where many unique items can arrive from the same consignor at once.',
+  item3Image: '',
+  item4Title: 'Vintage & clothing stores',
+  item4Text: 'Apparel, accessories and vintage inventory where every item may need its own title, price, photos and consignor record.',
+  item4Image: '',
+  item5Title: 'Furniture & home décor consignment',
+  item5Text: 'Larger one-off pieces that need ownership, pricing, sale status and payout information kept together.',
+  item5Image: '',
+  item6Title: 'Specialty resale stores',
+  item6Text: 'Sporting goods, collectibles, designer goods and other resale businesses handling unique inventory through Shopify.',
+  item6Image: '',
+};
+
+const featuresCtaDefaults = {
+  heading: 'Spend less time entering inventory and more time selling it.',
+  text: 'Explore consignors, fast mobile intake, Shopify product creation, POS and online sales tracking, and payouts in the working app demo.',
+  buttonText: 'Open Shopify App Demo',
+  buttonUrl: '/shopify-app',
+};
+
+
+export const siteBuilderConfig = {
+  root: {
+    fields: {
+      seoTitle: { type: 'text', label: 'SEO title' },
+      seoDescription: { type: 'textarea', label: 'SEO description' },
+      ogImage: { ...imageField, label: 'Social / OG image' },
+    },
+    defaultProps: {
+      seoTitle: '',
+      seoDescription: '',
+      ogImage: '',
+    },
+    render: ({ children }) => <>{children}</>,
+  },
+  categories: {
+    homepage: {
+      title: 'Homepage',
+      components: ['HomeHeroBlock', 'HomeIntegrationBlock', 'HomeVideosBlock', 'HomeLinksBlock'],
+    },
+    featuresPage: {
+      title: 'Features page',
+      components: ['FeaturesHeroBlock', 'FeaturesGridBlock', 'FeaturesAudienceBlock', 'FeaturesCtaBlock'],
+    },
+    content: {
+      title: 'Content',
+      components: ['HeadingBlock', 'TextBlock', 'ImageBlock', 'ImageTextBlock'],
+    },
+    marketing: {
+      title: 'Marketing',
+      components: ['HeroBlock', 'CtaBlock', 'ServiceRequestBlock', 'HiringContactBlock'],
+    },
+    showcase: {
+      title: 'Showcase',
+      components: ['ShowcaseHeroBlock', 'ProofStripBlock', 'ProjectShowcaseBlock', 'CaseStudyBlock', 'CardGridBlock', 'StorySplitBlock', 'ProcessRowsBlock', 'SkillsGridBlock', 'LargeCtaBlock'],
+    },
+  },
+  components: {
+
+    HomeHeroBlock: {
+      label: 'Homepage Hero',
+      fields: {
+        brandText: { type: 'text', label: 'Shopify badge text' },
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'text', label: 'Description' },
+        primaryButtonText: { type: 'text', label: 'Primary button text' },
+        primaryButtonAction: { type: 'select', label: 'Primary button action', options: [{label:'Go to URL',value:'link'},{label:'Open quote drawer',value:'quote'}] },
+        primaryButtonUrl: { type: 'text', label: 'Primary button link' },
+        watchButtonText: { type: 'text', label: 'Watch button text' },
+        watchButtonUrl: { type: 'text', label: 'Watch button link' },
+        partnerButtonText: { type: 'text', label: 'Partner button text' },
+        partnerButtonUrl: { type: 'text', label: 'Partner button link' },
+        note1: { type: 'text', label: 'Feature pill 1' },
+        note2: { type: 'text', label: 'Feature pill 2' },
+        note3: { type: 'text', label: 'Feature pill 3' },
+        panelTitle: { type: 'text', label: 'Panel title' },
+        panelSubtitle: { type: 'text', label: 'Panel subtitle' },
+        panelDate: { type: 'text', label: 'Panel date label' },
+        panelHeading: { type: 'text', label: 'Panel heading' },
+        metric1Label: { type: 'text', label: 'Metric 1 label' },
+        metric1Value: { type: 'text', label: 'Metric 1 value' },
+        metric2Label: { type: 'text', label: 'Metric 2 label' },
+        metric2Value: { type: 'text', label: 'Metric 2 value' },
+        metric3Label: { type: 'text', label: 'Metric 3 label' },
+        metric3Value: { type: 'text', label: 'Metric 3 value' },
+        metric4Label: { type: 'text', label: 'Metric 4 label' },
+        metric4Value: { type: 'text', label: 'Metric 4 value' },
+        person1Name: { type: 'text', label: 'Example consignor 1' },
+        person1Detail: { type: 'text', label: 'Example detail 1' },
+        person1Percent: { type: 'text', label: 'Example split 1' },
+        person2Name: { type: 'text', label: 'Example consignor 2' },
+        person2Detail: { type: 'text', label: 'Example detail 2' },
+        person2Percent: { type: 'text', label: 'Example split 2' },
+      },
+      defaultProps: homeHeroDefaults,
+      render: rawProps => {
+        const props = { ...homeHeroDefaults, ...rawProps };
+        return <div className="jci-public-preview">
+          <section className="hero-section compact-home-hero shopify-home-hero">
+            <div className="hero-copy">
+              <div className="shopify-hero-brand">
+                <img src={publicAsset('/images/brand/shopify-logo1.png?v=20260907')} alt="Shopify" />
+                <span>{props.brandText}</span>
+              </div>
+              <span className="hero-kicker">{props.eyebrow}</span>
+              <h1>{props.heading}</h1>
+              <p>{props.text}</p>
+              <div className="hero-actions">
+                <a className="public-button large" href={props.primaryButtonUrl || '#'} onClick={previewClick}>{props.primaryButtonText} <ArrowRight size={18}/></a>
+                <a className="public-button secondary large" href={props.watchButtonUrl || '#'} onClick={previewClick}>{props.watchButtonText}</a>
+                <a className="public-button secondary large" href={props.partnerButtonUrl || '#'} onClick={previewClick}>{props.partnerButtonText}</a>
+              </div>
+              <div className="shopify-hero-notes">
+                <span><Smartphone size={16}/> {props.note1}</span>
+                <span><ScanBarcode size={16}/> {props.note2}</span>
+                <span><WalletCards size={16}/> {props.note3}</span>
+              </div>
+            </div>
+            <div className="hero-panel">
+              <div className="hero-panel-shopify">
+                <img src={publicAsset('/images/brand/shopify-logo2.png?v=20260907')} alt="" />
+                <div><strong>{props.panelTitle}</strong><span>{props.panelSubtitle}</span></div>
+              </div>
+              <div className="hero-panel-top"><span>{props.panelDate}</span><strong>{props.panelHeading}</strong></div>
+              <div className="hero-metrics">
+                <div><span>{props.metric1Label}</span><strong>{props.metric1Value}</strong></div>
+                <div><span>{props.metric2Label}</span><strong>{props.metric2Value}</strong></div>
+                <div><span>{props.metric3Label}</span><strong>{props.metric3Value}</strong></div>
+                <div><span>{props.metric4Label}</span><strong>{props.metric4Value}</strong></div>
+              </div>
+              <div className="hero-list">
+                <div><span className="mini-avatar">{props.person1Initials || 'SM'}</span><span><strong>{props.person1Name}</strong><small>{props.person1Detail}</small></span><span>{props.person1Percent}</span></div>
+                <div><span className="mini-avatar">{props.person2Initials || 'DR'}</span><span><strong>{props.person2Name}</strong><small>{props.person2Detail}</small></span><span>{props.person2Percent}</span></div>
+              </div>
+            </div>
+          </section>
+        </div>;
+      },
+    },
+    HomeIntegrationBlock: {
+      label: 'Shopify Integration Section',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'text', label: 'Description' },
+        card1Heading: { type: 'text', label: 'Card 1 heading' },
+        card1Text: { type: 'text', label: 'Card 1 text' },
+        card2Heading: { type: 'text', label: 'Card 2 heading' },
+        card2Text: { type: 'text', label: 'Card 2 text' },
+        card3Heading: { type: 'text', label: 'Card 3 heading' },
+        card3Text: { type: 'text', label: 'Card 3 text' },
+      },
+      defaultProps: homeIntegrationDefaults,
+      render: rawProps => {
+        const props = { ...homeIntegrationDefaults, ...rawProps };
+        return <div className="jci-public-preview">
+          <section className="shopify-integration-section public-section">
+            <div className="shopify-integration-heading">
+              <div>
+                <span>{props.eyebrow}</span>
+                <h2>{props.heading}</h2>
+                <p>{props.text}</p>
+              </div>
+              <img src={publicAsset('/images/brand/shopify-logo1.png?v=20260907')} alt="Shopify" />
+            </div>
+            <div className="shopify-feature-strip">
+              <article><Smartphone size={25}/><h3>{props.card1Heading}</h3><p>{props.card1Text}</p></article>
+              <article className="shopify-pos-card"><div className="shopify-pos-mark"><img src={publicAsset('/images/brand/shopify-logo2.png?v=20260907')} alt=""/><strong>Shopify POS</strong></div><h3>{props.card2Heading}</h3><p>{props.card2Text}</p></article>
+              <article><WalletCards size={25}/><h3>{props.card3Heading}</h3><p>{props.card3Text}</p></article>
+            </div>
+          </section>
+        </div>;
+      },
+    },
+    HomeVideosBlock: {
+      label: 'Homepage Videos',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+      },
+      defaultProps: { eyebrow: 'Watch the Shopify workflow', heading: 'See JustConsignIn in action.' },
+      render: props => <HomeVideosPreview {...props}/>,
+    },
+    HomeLinksBlock: {
+      label: 'Homepage Links',
+      fields: {
+        link1Title: { type: 'text', label: 'Link 1 title' },
+        link1Text: { type: 'text', label: 'Link 1 description' },
+        link1Url: { type: 'text', label: 'Link 1 URL' },
+        link2Title: { type: 'text', label: 'Link 2 title' },
+        link2Text: { type: 'text', label: 'Link 2 description' },
+        link2Url: { type: 'text', label: 'Link 2 URL' },
+        link3Title: { type: 'text', label: 'Link 3 title' },
+        link3Text: { type: 'text', label: 'Link 3 description' },
+        link3Url: { type: 'text', label: 'Link 3 URL' },
+      },
+      defaultProps: homeLinksDefaults,
+      render: rawProps => {
+        const props = { ...homeLinksDefaults, ...rawProps };
+        return <div className="jci-public-preview">
+          <section className="home-link-grid" aria-label="Explore JustConsignIn">
+            <a href={props.link1Url || '#'} onClick={previewClick}><Users size={22}/><div><strong>{props.link1Title}</strong><span>{props.link1Text}</span></div><ArrowRight size={18}/></a>
+            <a href={props.link2Url || '#'} onClick={previewClick}><ClipboardList size={22}/><div><strong>{props.link2Title}</strong><span>{props.link2Text}</span></div><ArrowRight size={18}/></a>
+            <a href={props.link3Url || '#'} onClick={previewClick}><Store size={22}/><div><strong>{props.link3Title}</strong><span>{props.link3Text}</span></div><ArrowRight size={18}/></a>
+          </section>
+        </div>;
+      },
+    },
+
+    FeaturesHeroBlock: {
+      label: 'Features Hero',
+      fields: {
+        brandText: { type: 'text', label: 'Shopify badge text' },
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'text', label: 'Description' },
+        image: { ...imageField, label: 'Hero image' },
+        imageAlt: { type: 'text', label: 'Image alt text' },
+        imagePosition: {
+          type: 'radio',
+          label: 'Image position',
+          options: [
+            { label: 'Right', value: 'right' },
+            { label: 'Left', value: 'left' },
+          ],
+        },
+      },
+      defaultProps: featuresHeroDefaults,
+      render: rawProps => {
+        const props = { ...featuresHeroDefaults, ...rawProps };
+        return <div className="jci-public-preview">
+          <section className={`public-page-hero ${props.image ? 'with-media' : ''} ${props.imagePosition === 'left' ? 'media-left' : 'media-right'}`}>
+            <div className="public-page-hero-copy">
+              <div className="shopify-page-brand"><img src={publicAsset('/images/brand/shopify-logo1.png')} alt="Shopify"/><span>{props.brandText}</span></div>
+              <span>{props.eyebrow}</span>
+              <h1>{props.heading}</h1>
+              <p>{props.text}</p>
+            </div>
+            {props.image && <div className="public-page-hero-media"><img src={props.image} alt={props.imageAlt || ''}/></div>}
+          </section>
+        </div>;
+      },
+    },
+    FeaturesGridBlock: {
+      label: 'Features Grid',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'text', label: 'Description' },
+        headingAlign: { type: 'radio', label: 'Heading alignment', options: [{ label: 'Left', value: 'left' }, { label: 'Centre', value: 'center' }] },
+        cardAlign: { type: 'radio', label: 'Card alignment', options: [{ label: 'Left', value: 'left' }, { label: 'Centre', value: 'center' }] },
+        columns: { type: 'radio', label: 'Desktop columns', options: [{ label: '2', value: '2' }, { label: '3', value: '3' }] },
+        background: { type: 'select', label: 'Section background', options: backgroundOptions },
+        sectionImage: { ...imageField, label: 'Section image' },
+        sectionImagePosition: { type: 'radio', label: 'Section image position', options: [{ label: 'Left', value: 'left' }, { label: 'Right', value: 'right' }, { label: 'Above', value: 'above' }] },
+        item1Title: { type: 'text', label: 'Feature 1 title' }, item1Text: { type: 'text', label: 'Feature 1 text' }, item1Image: { ...imageField, label: 'Feature 1 image' },
+        item2Title: { type: 'text', label: 'Feature 2 title' }, item2Text: { type: 'text', label: 'Feature 2 text' }, item2Image: { ...imageField, label: 'Feature 2 image' },
+        item3Title: { type: 'text', label: 'Feature 3 title' }, item3Text: { type: 'text', label: 'Feature 3 text' }, item3Image: { ...imageField, label: 'Feature 3 image' },
+        item4Title: { type: 'text', label: 'Feature 4 title' }, item4Text: { type: 'text', label: 'Feature 4 text' }, item4Image: { ...imageField, label: 'Feature 4 image' },
+        item5Title: { type: 'text', label: 'Feature 5 title' }, item5Text: { type: 'text', label: 'Feature 5 text' }, item5Image: { ...imageField, label: 'Feature 5 image' },
+        item6Title: { type: 'text', label: 'Feature 6 title' }, item6Text: { type: 'text', label: 'Feature 6 text' }, item6Image: { ...imageField, label: 'Feature 6 image' },
+        item7Title: { type: 'text', label: 'Feature 7 title' }, item7Text: { type: 'text', label: 'Feature 7 text' }, item7Image: { ...imageField, label: 'Feature 7 image' },
+        item8Title: { type: 'text', label: 'Feature 8 title' }, item8Text: { type: 'text', label: 'Feature 8 text' }, item8Image: { ...imageField, label: 'Feature 8 image' },
+      },
+      defaultProps: featuresGridDefaults,
+      render: rawProps => {
+        const props = { ...featuresGridDefaults, ...rawProps };
+        const items = [
+          [Store, props.item1Title, props.item1Text, props.item1Image],
+          [Users, props.item2Title, props.item2Text, props.item2Image],
+          [Smartphone, props.item3Title, props.item3Text, props.item3Image],
+          [PackagePlus, props.item4Title, props.item4Text, props.item4Image],
+          [ReceiptText, props.item5Title, props.item5Text, props.item5Image],
+          [WalletCards, props.item6Title, props.item6Text, props.item6Image],
+          [BarChart3, props.item7Title, props.item7Text, props.item7Image],
+          [FileUp, props.item8Title, props.item8Text, props.item8Image],
+        ];
+        const introClass = `feature-section-intro align-${props.headingAlign || 'center'} ${props.sectionImage ? `with-media media-${props.sectionImagePosition || 'right'}` : ''}`;
+        return <div className="jci-public-preview">
+          <section className={`public-section editable-feature-section theme-${props.background || 'light'}`}>
+            <div className={introClass}>
+              <div className="section-heading">
+                <span>{props.eyebrow}</span>
+                <h2>{props.heading}</h2>
+                <p>{props.text}</p>
+              </div>
+              {props.sectionImage && <div className="feature-section-image"><img src={props.sectionImage} alt=""/></div>}
+            </div>
+            <div className={`feature-grid public-feature-grid columns-${props.columns || '2'} cards-${props.cardAlign || 'left'}`}>
+              {items.map(([Icon,title,copy,image], index) => <article key={index}>
+                {image ? <img className="feature-card-image" src={image} alt=""/> : <Icon size={26}/>}
+                <h3>{title}</h3><p>{copy}</p>
+              </article>)}
+            </div>
+          </section>
+        </div>;
+      },
+    },
+    FeaturesAudienceBlock: {
+      label: 'Store Types Grid',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'text', label: 'Description' },
+        headingAlign: { type: 'radio', label: 'Heading alignment', options: [{ label: 'Left', value: 'left' }, { label: 'Centre', value: 'center' }] },
+        cardAlign: { type: 'radio', label: 'Card alignment', options: [{ label: 'Left', value: 'left' }, { label: 'Centre', value: 'center' }] },
+        columns: { type: 'radio', label: 'Desktop columns', options: [{ label: '2', value: '2' }, { label: '3', value: '3' }] },
+        background: { type: 'select', label: 'Section background', options: backgroundOptions },
+        sectionImage: { ...imageField, label: 'Section image' },
+        sectionImagePosition: { type: 'radio', label: 'Section image position', options: [{ label: 'Left', value: 'left' }, { label: 'Right', value: 'right' }, { label: 'Above', value: 'above' }] },
+        item1Title: { type: 'text', label: 'Store type 1 title' }, item1Text: { type: 'text', label: 'Store type 1 text' }, item1Image: { ...imageField, label: 'Store type 1 image' },
+        item2Title: { type: 'text', label: 'Store type 2 title' }, item2Text: { type: 'text', label: 'Store type 2 text' }, item2Image: { ...imageField, label: 'Store type 2 image' },
+        item3Title: { type: 'text', label: 'Store type 3 title' }, item3Text: { type: 'text', label: 'Store type 3 text' }, item3Image: { ...imageField, label: 'Store type 3 image' },
+        item4Title: { type: 'text', label: 'Store type 4 title' }, item4Text: { type: 'text', label: 'Store type 4 text' }, item4Image: { ...imageField, label: 'Store type 4 image' },
+        item5Title: { type: 'text', label: 'Store type 5 title' }, item5Text: { type: 'text', label: 'Store type 5 text' }, item5Image: { ...imageField, label: 'Store type 5 image' },
+        item6Title: { type: 'text', label: 'Store type 6 title' }, item6Text: { type: 'text', label: 'Store type 6 text' }, item6Image: { ...imageField, label: 'Store type 6 image' },
+      },
+      defaultProps: featuresAudienceDefaults,
+      render: rawProps => {
+        const props = { ...featuresAudienceDefaults, ...rawProps };
+        const items = [
+          [props.item1Title, props.item1Text, props.item1Image],
+          [props.item2Title, props.item2Text, props.item2Image],
+          [props.item3Title, props.item3Text, props.item3Image],
+          [props.item4Title, props.item4Text, props.item4Image],
+          [props.item5Title, props.item5Text, props.item5Image],
+          [props.item6Title, props.item6Text, props.item6Image],
+        ];
+        const introClass = `feature-section-intro align-${props.headingAlign || 'center'} ${props.sectionImage ? `with-media media-${props.sectionImagePosition || 'right'}` : ''}`;
+        return <div className="jci-public-preview">
+          <section className={`public-section editable-feature-section theme-${props.background || 'light'}`}>
+            <div className={introClass}>
+              <div className="section-heading">
+                <span>{props.eyebrow}</span>
+                <h2>{props.heading}</h2>
+                <p>{props.text}</p>
+              </div>
+              {props.sectionImage && <div className="feature-section-image"><img src={props.sectionImage} alt=""/></div>}
+            </div>
+            <div className={`feature-grid public-feature-grid columns-${props.columns || '2'} cards-${props.cardAlign || 'left'}`}>
+              {items.map(([title,copy,image], index) => <article key={index}>
+                {image && <img className="feature-card-image" src={image} alt=""/>}
+                <h3>{title}</h3><p>{copy}</p>
+              </article>)}
+            </div>
+          </section>
+        </div>;
+      },
+    },
+    FeaturesCtaBlock: {
+      label: 'Features CTA',
+      fields: {
+        heading: { type: 'text', label: 'Heading' },
+        headingLevel: { ...headingLevelField, label: 'Heading level' },
+        text: { type: 'text', label: 'Text' },
+        buttonText: { type: 'text', label: 'Button text' },
+        buttonAction: { type: 'select', label: 'Button action', options: [{label:'Go to URL',value:'link'},{label:'Open quote drawer',value:'quote'}] },
+        buttonUrl: { type: 'text', label: 'Button link' },
+      },
+      defaultProps: featuresCtaDefaults,
+      render: rawProps => {
+        const props = { ...featuresCtaDefaults, ...rawProps };
+        return <div className="jci-public-preview">
+          <section className="public-cta">
+            <h2>{props.heading}</h2>
+            <p>{props.text}</p>
+            <a className="public-button large" href={props.buttonUrl || '#'} onClick={previewClick}>{props.buttonText}</a>
+          </section>
+        </div>;
+      },
+    },
+
+    ShowcaseHeroBlock: {
+      label: 'Showcase Hero',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        headingLevel: { ...headingLevelField, label: 'Heading level' },
+        accent: { type: 'text', label: 'Accent text' },
+        text: { type: 'text', label: 'Description' },
+        primaryButtonText: { type: 'text', label: 'Primary button text' },
+        primaryButtonUrl: { type: 'text', label: 'Primary button link' },
+        secondaryButtonText: { type: 'text', label: 'Secondary button text' },
+        secondaryButtonUrl: { type: 'text', label: 'Secondary button link' },
+        note: { type: 'text', label: 'Small note' },
+        image: { ...imageField, label: 'Hero image' },
+        imageAlt: { type: 'text', label: 'Hero image alt text' },
+      },
+      defaultProps: {
+        eyebrow: 'Developer • Product Builder • Problem Solver',
+        heading: 'I build digital products that',
+        headingLevel: 'h1',
+        accent: 'solve real problems.',
+        text: 'Web applications, Shopify solutions, ecommerce systems, automation and AI-assisted development — from the first idea through testing, refinement and deployment.',
+        primaryButtonText: 'View my work →',
+        primaryButtonUrl: '/work',
+        secondaryButtonText: 'How I work with AI',
+        secondaryButtonUrl: '/ai-development',
+        note: 'Based in Ontario, Canada • Building real products for real business workflows',
+        image: JUSTIN_SHOWCASE_IMAGE,
+        imageAlt: 'JustConsignIn featured project',
+      },
+      render: p => <section className="shared-showcase-hero">
+        <div className="shared-wrap shared-showcase-grid">
+          <div className="shared-showcase-copy">
+            <div className="shared-eyebrow">{p.eyebrow}</div>
+            <BlockHeading level={p.headingLevel || 'h1'} className="shared-showcase-heading">{p.heading} {p.accent && <span>{p.accent}</span>}</BlockHeading>
+            <p>{p.text}</p>
+            <div className="shared-showcase-actions">
+              {p.primaryButtonText && <a className="shared-btn shared-btn-primary" href={p.primaryButtonUrl || '#'} onClick={previewClick}>{p.primaryButtonText}</a>}
+              {p.secondaryButtonText && <a className="shared-btn shared-btn-secondary" href={p.secondaryButtonUrl || '#'} onClick={previewClick}>{p.secondaryButtonText}</a>}
+            </div>
+            {p.note && <div className="shared-showcase-note">{p.note}</div>}
+          </div>
+          <div className="shared-showcase-image"><img src={p.image || JUSTIN_SHOWCASE_IMAGE} alt={p.imageAlt || 'JustConsignIn featured project'}/></div>
+        </div>
+      </section>,
+    },
+
+    ProofStripBlock: {
+      label: 'Proof Strip',
+      fields: {
+        itemHeadingLevel: { ...headingLevelField, label: 'Proof title level' },
+        item1Title: { type: 'text', label: 'Item 1 title' }, item1Text: { type: 'text', label: 'Item 1 text' },
+        item2Title: { type: 'text', label: 'Item 2 title' }, item2Text: { type: 'text', label: 'Item 2 text' },
+        item3Title: { type: 'text', label: 'Item 3 title' }, item3Text: { type: 'text', label: 'Item 3 text' },
+      },
+      defaultProps: {
+        itemHeadingLevel: 'h3',
+        item1Title: 'Real products', item1Text: 'Not mockups built only for a portfolio.',
+        item2Title: 'Real workflows', item2Text: 'Software designed around actual business needs.',
+        item3Title: 'AI-assisted', item3Text: 'Faster prototyping, debugging, iteration and delivery.',
+      },
+      render: p => <section className="shared-proof-strip"><div className="shared-wrap shared-proof-grid">
+        {[[p.item1Title,p.item1Text],[p.item2Title,p.item2Text],[p.item3Title,p.item3Text]].map(([title,copy],i)=><div className="shared-proof" key={i}><BlockHeading level={p.itemHeadingLevel || 'h3'} className="shared-proof-title">{title}</BlockHeading><span>{copy}</span></div>)}
+      </div></section>,
+    },
+
+    ProjectShowcaseBlock: {
+      label: 'JUSTIN · Project Showcase',
+      fields: {
+        eyebrow:{type:'text',label:'Section eyebrow'},
+        heading:{type:'text',label:'Section heading'},
+        headingLevel:{...headingLevelField,label:'Section heading level'},
+        projectHeadingLevel:{...headingLevelField,label:'Project title level'},
+
+        project1Image:{...imageField,label:'Project 1 image'},project1ImageAlt:{type:'text',label:'Project 1 image alt text'},project1Title:{type:'text',label:'Project 1 title'},project1Text:{type:'textarea',label:'Project 1 description'},project1ButtonText:{type:'text',label:'Project 1 button text'},project1ButtonUrl:{type:'text',label:'Project 1 page URL'},project1LiveButtonText:{type:'text',label:'Project 1 live button text'},project1LiveUrl:{type:'text',label:'Project 1 live website URL'},
+        project2Image:{...imageField,label:'Project 2 image'},project2ImageAlt:{type:'text',label:'Project 2 image alt text'},project2Title:{type:'text',label:'Project 2 title'},project2Text:{type:'textarea',label:'Project 2 description'},project2ButtonText:{type:'text',label:'Project 2 button text'},project2ButtonUrl:{type:'text',label:'Project 2 page URL'},project2LiveButtonText:{type:'text',label:'Project 2 live button text'},project2LiveUrl:{type:'text',label:'Project 2 live website URL'},
+        project3Image:{...imageField,label:'Project 3 image'},project3ImageAlt:{type:'text',label:'Project 3 image alt text'},project3Title:{type:'text',label:'Project 3 title'},project3Text:{type:'textarea',label:'Project 3 description'},project3ButtonText:{type:'text',label:'Project 3 button text'},project3ButtonUrl:{type:'text',label:'Project 3 page URL'},project3LiveButtonText:{type:'text',label:'Project 3 live button text'},project3LiveUrl:{type:'text',label:'Project 3 live website URL'},
+      },
+      defaultProps: {
+        eyebrow:'SELECTED WORDPRESS PROJECTS',
+        heading:'WordPress work',
+        headingLevel:'h2',
+        projectHeadingLevel:'h3',
+        project1Image:'',project1ImageAlt:'Sunluna Vacations website',project1Title:'Sunluna Vacations',project1Text:'Responsive WordPress website for a travel business, with structured content, customer contact paths and SEO foundations.',project1ButtonText:'View Project →',project1ButtonUrl:'/work/wordpress-websites/sunluna-vacations',project1LiveButtonText:'Visit Live Website ↗',project1LiveUrl:'https://sunlunavacations.com/',
+        project2Image:'',project2ImageAlt:'Kingscrest Property Management website',project2Title:'Kingscrest Property Management',project2Text:'WordPress business website focused on property-management services, responsive presentation and clear customer contact.',project2ButtonText:'View Project →',project2ButtonUrl:'/work/wordpress-websites/kingscrest-property-management',project2LiveButtonText:'Visit Live Website ↗',project2LiveUrl:'https://kingscrestpm.ca/',
+        project3Image:'',project3ImageAlt:'Sunwings Transport website',project3Title:'Sunwings Transport',project3Text:'Responsive WordPress website presenting transportation services with clear service information and customer inquiry paths.',project3ButtonText:'View Project →',project3ButtonUrl:'/work/wordpress-websites/sunwings-transport',project3LiveButtonText:'Visit Live Website ↗',project3LiveUrl:'https://sunwingstransport.ca/',
+      },
+      render: p => <section className="shared-section shared-project-showcase"><div className="shared-wrap">
+        <div className="shared-eyebrow">{p.eyebrow}</div>
+        <BlockHeading level={p.headingLevel || 'h2'} className="shared-section-title">{p.heading}</BlockHeading>
+        <div className="shared-project-showcase-list">
+          {[1,2,3].filter(i=>p['project'+i+'Title'] || p['project'+i+'Text']).map(i=><article className="shared-project-showcase-card" key={i}>
+            <div className="shared-project-showcase-image">
+              {p['project'+i+'Image'] ? <img src={p['project'+i+'Image']} alt={p['project'+i+'ImageAlt'] || p['project'+i+'Title'] || ''}/> : <div className="shared-project-showcase-placeholder">Project image /<br/>screenshot</div>}
+            </div>
+            <div className="shared-project-showcase-copy">
+              <BlockHeading level={p.projectHeadingLevel || 'h3'} className="shared-project-showcase-heading">{p['project'+i+'Title']}</BlockHeading>
+              <p>{p['project'+i+'Text']}</p>
+              <div className="shared-project-showcase-actions">
+                {p['project'+i+'ButtonText'] && p['project'+i+'ButtonUrl'] && <a className="shared-btn shared-btn-primary" href={p['project'+i+'ButtonUrl']} onClick={previewClick}>{p['project'+i+'ButtonText']}</a>}
+                {p['project'+i+'LiveButtonText'] && p['project'+i+'LiveUrl'] && <a className="shared-btn shared-btn-secondary" href={p['project'+i+'LiveUrl']} onClick={previewClick}>{p['project'+i+'LiveButtonText']}</a>}
+              </div>
+            </div>
+          </article>)}
+        </div>
+      </div></section>,
+    },
+
+    CaseStudyBlock: {
+      label: 'Featured Case Study',
+      fields: {
+        eyebrow: { type: 'text', label: 'Section eyebrow' },
+        sectionHeading: { type: 'text', label: 'Section heading' },
+        sectionHeadingLevel: { ...headingLevelField, label: 'Section heading level' },
+        sectionText: { type: 'text', label: 'Section description' },
+        projectEyebrow: { type: 'text', label: 'Project eyebrow' },
+        projectHeading: { type: 'text', label: 'Project heading' },
+        projectHeadingLevel: { ...headingLevelField, label: 'Project heading level' },
+        projectText: { type: 'text', label: 'Project text' },
+        tags: { type: 'text', label: 'Tags (comma separated)' },
+        buttonText: { type: 'text', label: 'Button text' },
+        buttonUrl: { type: 'text', label: 'Button link' },
+        workflowTitle: { type: 'text', label: 'Workflow title' },
+        workflowHeadingLevel: { ...headingLevelField, label: 'Workflow title level' },
+        step1: { type: 'text', label: 'Workflow step 1' }, step2: { type: 'text', label: 'Workflow step 2' },
+        step3: { type: 'text', label: 'Workflow step 3' }, step4: { type: 'text', label: 'Workflow step 4' },
+      },
+      defaultProps: {
+        eyebrow: 'Featured case study',
+        sectionHeading: 'From a real store problem to a working Shopify product.',
+        sectionHeadingLevel: 'h2',
+        sectionText: 'JustConsignIn started with a real consignment workflow at Jill & The Beanstalk and grew into a Shopify-focused application for managing consignors, products, sales and payouts.',
+        projectEyebrow: 'JustConsignIn',
+        projectHeading: 'Build around the business. Not the other way around.',
+        projectHeadingLevel: 'h3',
+        projectText: 'The goal was not to build another spreadsheet. It was to remove duplicate entry, connect consignment inventory to Shopify, support mobile intake, track sold items and make consignor payouts easier to understand.',
+        tags: 'Shopify, React, POS, Supabase, Mobile Intake, Payouts',
+        buttonText: 'Read the story →',
+        buttonUrl: '/work',
+        workflowTitle: 'Consignment workflow',
+        workflowHeadingLevel: 'h4',
+        step1: 'Create consignor + item',
+        step2: 'Publish to Shopify POS / Online Store',
+        step3: 'Track the sale back to the consignor',
+        step4: 'Calculate and complete payout',
+      },
+      render: p => <section className="shared-section shared-featured-case"><div className="shared-wrap">
+        <div className="shared-eyebrow">{p.eyebrow}</div>
+        <BlockHeading level={p.sectionHeadingLevel || 'h2'} className="shared-section-title">{p.sectionHeading}</BlockHeading>
+        <p className="shared-lead">{p.sectionText}</p>
+        <div className="shared-case-card">
+          <div className="shared-case-copy">
+            <div className="shared-eyebrow">{p.projectEyebrow}</div>
+            <BlockHeading level={p.projectHeadingLevel || 'h3'} className="shared-case-heading">{p.projectHeading}</BlockHeading><p>{p.projectText}</p>
+            <div className="shared-tag-row">{String(p.tags||'').split(',').map(tag=>tag.trim()).filter(Boolean).map(tag=><span className="shared-tag" key={tag}>{tag}</span>)}</div>
+            {p.buttonText && <a className="shared-btn shared-btn-primary" href={p.buttonUrl || '#'} onClick={previewClick}>{p.buttonText}</a>}
+          </div>
+          <div className="shared-case-visual"><div className="shared-workflow-card"><BlockHeading level={p.workflowHeadingLevel || 'h4'} className="shared-workflow-heading">{p.workflowTitle}</BlockHeading>
+            <div className="shared-workflow-list">{[p.step1,p.step2,p.step3,p.step4].map((step,i)=><div className="shared-workflow-item" key={i}><b>{i+1}</b><span>{step}</span></div>)}</div>
+          </div></div>
+        </div>
+      </div></section>,
+    },
+
+    CardGridBlock: {
+      label: 'Card Grid',
+      fields: {
+        eyebrow:{type:'text',label:'Section eyebrow'},heading:{type:'text',label:'Section heading'},headingLevel:{...headingLevelField,label:'Section heading level'},itemHeadingLevel:{...headingLevelField,label:'Card title level'},text:{type:'text',label:'Section description'},
+        item1Eyebrow:{type:'text',label:'Card 1 eyebrow'},item1Title:{type:'text',label:'Card 1 title'},item1Text:{type:'text',label:'Card 1 text'},item1Icon:{type:'text',label:'Card 1 icon text'},item1Style:{type:'select',label:'Card 1 style',options:[{label:'White',value:'white'},{label:'Blue',value:'blue'},{label:'Dark',value:'dark'}]},
+        item2Eyebrow:{type:'text',label:'Card 2 eyebrow'},item2Title:{type:'text',label:'Card 2 title'},item2Text:{type:'text',label:'Card 2 text'},item2Icon:{type:'text',label:'Card 2 icon text'},item2Style:{type:'select',label:'Card 2 style',options:[{label:'White',value:'white'},{label:'Blue',value:'blue'},{label:'Dark',value:'dark'}]},
+        item3Eyebrow:{type:'text',label:'Card 3 eyebrow'},item3Title:{type:'text',label:'Card 3 title'},item3Text:{type:'text',label:'Card 3 text'},item3Icon:{type:'text',label:'Card 3 icon text'},item3Style:{type:'select',label:'Card 3 style',options:[{label:'White',value:'white'},{label:'Blue',value:'blue'},{label:'Dark',value:'dark'}]},
+        item4Eyebrow:{type:'text',label:'Card 4 eyebrow'},item4Title:{type:'text',label:'Card 4 title'},item4Text:{type:'text',label:'Card 4 text'},item4Icon:{type:'text',label:'Card 4 icon text'},item4Style:{type:'select',label:'Card 4 style',options:[{label:'White',value:'white'},{label:'Blue',value:'blue'},{label:'Dark',value:'dark'}]},
+        buttonText:{type:'text',label:'CTA button text'},buttonUrl:{type:'text',label:'CTA button link'},
+      },
+      defaultProps: {
+        eyebrow:'Selected work',heading:'Projects that solve something real.',headingLevel:'h2',itemHeadingLevel:'h3',text:'The goal of every project is the same: make a business process clearer, faster or easier to manage.',
+        item1Eyebrow:'Professional work',item1Title:'Wheels Automotive',item1Text:'Adobe Commerce / Magento, B2B ecommerce, frontend components, QA, product/category content, SEO and launch support.',item1Icon:'WA',item1Style:'dark',
+        item2Eyebrow:'Custom business tools',item2Title:'Internal tools & admin systems',item2Text:'Dashboards, data-entry workflows, admin tools and interfaces designed around how people actually perform the work.',item2Icon:'UI',item2Style:'white',
+        item3Eyebrow:'Ecommerce',item3Title:'Shopify & commerce integrations',item3Text:'Product workflows, POS-connected applications, publishing controls and custom ecommerce experiences.',item3Icon:'EC',item3Style:'blue',
+        item4Eyebrow:'AI-assisted development',item4Title:'From idea to working software faster.',item4Text:'AI supports architecture, prototyping, debugging, refactoring, UX exploration, research and documentation while product direction stays human-led.',item4Icon:'AI',item4Style:'white',
+        buttonText:'View Work Experience →',buttonUrl:'/work',
+      },
+      render: p => <section className="shared-card-grid-section"><div className="shared-wrap">
+        {(p.eyebrow || p.heading || p.text) && <div className="shared-card-grid-heading">{p.eyebrow && <div className="shared-eyebrow">{p.eyebrow}</div>}{p.heading && <BlockHeading level={p.headingLevel || 'h2'} className="shared-section-title">{p.heading}</BlockHeading>}{p.text && <p className="shared-lead">{p.text}</p>}</div>}
+        <div className="shared-work-grid">{[1,2,3,4].filter(i=>p['item'+i+'Title'] || p['item'+i+'Text']).map(i=><article className={'shared-work-card '+(p['item'+i+'Style']||'white')} key={i}><div className="shared-card-icon">{p['item'+i+'Icon']}</div><div className="shared-eyebrow">{p['item'+i+'Eyebrow']}</div><BlockHeading level={p.itemHeadingLevel || 'h3'} className="shared-work-card-heading">{p['item'+i+'Title']}</BlockHeading><p>{p['item'+i+'Text']}</p></article>)}</div>
+        {p.buttonText && <div className="shared-section-cta"><a className="shared-btn shared-btn-primary" href={p.buttonUrl || '/work'} onClick={previewClick}>{p.buttonText}</a></div>}
+      </div></section>,
+    },
+
+    WorkExperiencePreviewBlock: {
+      label: 'RESUME · Work Experience Preview',
+      fields: {
+        eyebrow:{type:'text',label:'Section eyebrow'},
+        heading:{type:'text',label:'Section heading'},
+        headingLevel:{...headingLevelField,label:'Section heading level'},
+        itemHeadingLevel:{...headingLevelField,label:'Role title level'},
+        text:{type:'textarea',label:'Section description'},
+
+        item1Date:{type:'text',label:'Role 1 date'},item1Location:{type:'text',label:'Role 1 location'},item1Title:{type:'text',label:'Role 1 title'},item1Company:{type:'text',label:'Role 1 company'},item1Text:{type:'textarea',label:'Role 1 summary'},item1Tags:{type:'text',label:'Role 1 skill bubbles (comma separated)'},
+        item2Date:{type:'text',label:'Role 2 date'},item2Location:{type:'text',label:'Role 2 location'},item2Title:{type:'text',label:'Role 2 title'},item2Company:{type:'text',label:'Role 2 company'},item2Text:{type:'textarea',label:'Role 2 summary'},item2Tags:{type:'text',label:'Role 2 skill bubbles (comma separated)'},
+        item3Date:{type:'text',label:'Role 3 date'},item3Location:{type:'text',label:'Role 3 location'},item3Title:{type:'text',label:'Role 3 title'},item3Company:{type:'text',label:'Role 3 company'},item3Text:{type:'textarea',label:'Role 3 summary'},item3Tags:{type:'text',label:'Role 3 skill bubbles (comma separated)'},
+        item4Date:{type:'text',label:'Role 4 date'},item4Location:{type:'text',label:'Role 4 location'},item4Title:{type:'text',label:'Role 4 title'},item4Company:{type:'text',label:'Role 4 company'},item4Text:{type:'textarea',label:'Role 4 summary'},item4Tags:{type:'text',label:'Role 4 skill bubbles (comma separated)'},
+
+        buttonText:{type:'text',label:'CTA button text'},
+        buttonUrl:{type:'text',label:'CTA button link'},
+      },
+      defaultProps: {
+        eyebrow:'WORK EXPERIENCE',
+        heading:'Professional experience.',
+        headingLevel:'h2',
+        itemHeadingLevel:'h3',
+        text:'A quick look at the roles behind the case studies — ecommerce leadership, client consulting and hands-on digital marketing execution.',
+        item1Date:'Aug 2025 — Present',
+        item1Location:'Hamilton, ON',
+        item1Title:'Digital Marketing Director',
+        item1Company:'Wheels Automotive Dealer Supplies',
+        item1Text:'Lead digital marketing and ecommerce for a 10,000+ SKU Adobe Magento B2B platform, including SEO, merchandising, UX, campaigns, content and ecommerce growth initiatives.',
+        item1Tags:'Adobe Commerce, Magento 2, B2B Ecommerce, SEO, UX, Digital Marketing',
+        item2Date:'2024 — Present',
+        item2Location:'Hamilton, ON',
+        item2Title:'Freelance Web & Digital Marketing Consultant',
+        item2Company:'JUSTinnovate',
+        item2Text:'Build and improve Shopify and WordPress websites, SEO, content and ecommerce programs for client businesses, including 116% YoY DTC revenue growth for one client through organic strategy.',
+        item2Tags:'Shopify, WordPress, SEO, Content Strategy, Analytics, CRO',
+        item3Date:'Jan 2025 — May 2025',
+        item3Location:'Hamilton, ON',
+        item3Title:'Digital Marketing & Ecommerce Internship',
+        item3Company:'Baffin',
+        item3Text:'Supported Shopify storefront operations, multilingual updates, site architecture, internal linking, promotional pages, email marketing campaigns and sales reporting.',
+        item3Tags:'Shopify, Ecommerce, Figma, Klaviyo, Email Marketing',
+        item4Date:'',
+        item4Location:'',
+        item4Title:'',
+        item4Company:'',
+        item4Text:'',
+        item4Tags:'',
+        buttonText:'View Full Work Experience →',
+        buttonUrl:'/work',
+        background:'light',
+      },
+      render: p => {
+        const items = [1,2,3,4].filter(i => p['item'+i+'Title'] || p['item'+i+'Company'] || p['item'+i+'Text']);
+        return <section className="resume-work-preview-section"><div className="shared-wrap">
+          <div className="resume-work-preview-head">
+            <div>{p.eyebrow && <div className="shared-eyebrow">{p.eyebrow}</div>}{p.heading && <BlockHeading level={p.headingLevel || 'h2'} className="resume-work-preview-heading">{p.heading}</BlockHeading>}</div>
+            {p.text && <p className="resume-work-preview-intro">{p.text}</p>}
+          </div>
+          <div className="resume-work-preview-list">
+            {items.map((i,index)=>{
+              const tags=String(p['item'+i+'Tags']||'').split(',').map(v=>v.trim()).filter(Boolean);
+              return <article className="resume-work-preview-card" key={i}>
+                <div className="resume-work-preview-marker">{String(index+1).padStart(2,'0')}</div>
+                <div className="resume-work-preview-meta"><span className="resume-work-preview-date">{p['item'+i+'Date']}</span>{p['item'+i+'Location'] && <span className="resume-work-preview-location">{p['item'+i+'Location']}</span>}</div>
+                <div className="resume-work-preview-content"><BlockHeading level={p.itemHeadingLevel || 'h3'} className="resume-work-preview-title">{p['item'+i+'Title']}</BlockHeading>{p['item'+i+'Company'] && <div className="resume-work-preview-company">{p['item'+i+'Company']}</div>}{p['item'+i+'Text'] && <p>{p['item'+i+'Text']}</p>}{tags.length>0 && <div className="resume-work-preview-tags">{tags.map(tag=><span key={tag}>{tag}</span>)}</div>}</div>
+              </article>;
+            })}
+          </div>
+          {p.buttonText && <div className="shared-section-cta"><a className="shared-btn shared-btn-primary" href={p.buttonUrl || '/work'} onClick={previewClick}>{p.buttonText}</a></div>}
+        </div></section>;
+      },
+    },
+
+    StorySplitBlock: {
+      label: 'Story Split',
+      fields: {
+        leftEyebrow:{type:'text',label:'Left eyebrow'},leftHeading:{type:'text',label:'Left heading'},leftHeadingLevel:{...headingLevelField,label:'Left heading level'},leftText1:{type:'text',label:'Left paragraph 1'},leftText2:{type:'text',label:'Left paragraph 2'},
+        rightEyebrow:{type:'text',label:'Right eyebrow'},rightHeading:{type:'text',label:'Right heading'},rightHeadingLevel:{...headingLevelField,label:'Right heading level'},pointHeadingLevel:{...headingLevelField,label:'Point title level'},
+        point1Title:{type:'text',label:'Point 1 title'},point1Text:{type:'text',label:'Point 1 text'},
+        point2Title:{type:'text',label:'Point 2 title'},point2Text:{type:'text',label:'Point 2 text'},
+        point3Title:{type:'text',label:'Point 3 title'},point3Text:{type:'text',label:'Point 3 text'},
+        point4Title:{type:'text',label:'Point 4 title'},point4Text:{type:'text',label:'Point 4 text'},
+      },
+      defaultProps: {
+        leftEyebrow:'About me',leftHeading:'I didn’t start my career behind a laptop.',leftHeadingLevel:'h3',leftText1:'My background is in mechanical engineering technology, CNC programming and tool & die design. That taught me to think about systems, tolerances, workflows and how things actually have to work in the real world.',leftText2:'I brought that same problem-solving mindset into web and mobile development.',
+        rightEyebrow:'How I think',rightHeading:'Software should remove friction, not create more of it.',rightHeadingLevel:'h2',pointHeadingLevel:'h4',
+        point1Title:'Understand the workflow first',point1Text:'Before writing code, I want to know what people are doing today, what is repetitive and where the process breaks down.',
+        point2Title:'Build the simplest useful version',point2Text:'I would rather test a useful working flow early than spend months polishing the wrong solution.',
+        point3Title:'Connect the systems already in use',point3Text:'Shopify, POS, APIs, databases and internal tools should work together instead of creating more duplicate work.',
+        point4Title:'Keep changing the product when reality says it should change',point4Text:'Real usage exposes things a specification never will. The software should evolve around what users actually need.',
+      },
+      render: p => <section className="shared-section"><div className="shared-wrap shared-story-grid">
+        <aside className="shared-story-card"><div className="shared-eyebrow">{p.leftEyebrow}</div><BlockHeading level={p.leftHeadingLevel || 'h3'} className="shared-story-card-heading">{p.leftHeading}</BlockHeading><p>{p.leftText1}</p><p>{p.leftText2}</p></aside>
+        <div><div className="shared-eyebrow">{p.rightEyebrow}</div><BlockHeading level={p.rightHeadingLevel || 'h2'} className="shared-section-title">{p.rightHeading}</BlockHeading><div className="shared-story-points">
+          {[1,2,3,4].map(i=><div className="shared-story-point" key={i}><BlockHeading level={p.pointHeadingLevel || 'h4'} className="shared-story-point-heading">{p['point'+i+'Title']}</BlockHeading><p>{p['point'+i+'Text']}</p></div>)}
+        </div></div>
+      </div></section>,
+    },
+
+    ProcessRowsBlock: {
+      label: 'Process Rows',
+      fields: {
+        eyebrow:{type:'text',label:'Eyebrow'},heading:{type:'text',label:'Heading'},headingLevel:{...headingLevelField,label:'Heading level'},rowHeadingLevel:{...headingLevelField,label:'Row label level'},text:{type:'text',label:'Description'},note:{type:'text',label:'Note'},
+        row1Label:{type:'text',label:'Row 1 label'},row1Text:{type:'text',label:'Row 1 text'},row2Label:{type:'text',label:'Row 2 label'},row2Text:{type:'text',label:'Row 2 text'},row3Label:{type:'text',label:'Row 3 label'},row3Text:{type:'text',label:'Row 3 text'},row4Label:{type:'text',label:'Row 4 label'},row4Text:{type:'text',label:'Row 4 text'},row5Label:{type:'text',label:'Row 5 label'},row5Text:{type:'text',label:'Row 5 text'},
+      },
+      defaultProps: {
+        eyebrow:'AI + Development',heading:'AI changes what one developer can accomplish.',headingLevel:'h2',rowHeadingLevel:'h4',text:'I use AI throughout the development process — not as a replacement for judgment, but as a way to move faster across more parts of a project.',note:'The business problem, product decisions, testing and final direction still need a human who understands what the software is supposed to accomplish.',
+        row1Label:'RESEARCH',row1Text:'Explore technologies, approaches and business requirements quickly.',row2Label:'ARCHITECTURE',row2Text:'Break a product into workflows, data structures and technical components.',row3Label:'BUILD',row3Text:'Accelerate frontend, backend, integrations and rapid prototyping.',row4Label:'DEBUG',row4Text:'Investigate problems, compare approaches and iterate much faster.',row5Label:'REFINE',row5Text:'Improve UX, documentation, SEO, content and deployment workflows.',
+      },
+      render: p => <section className="shared-section shared-process"><div className="shared-wrap shared-process-grid">
+        <div><div className="shared-eyebrow">{p.eyebrow}</div><BlockHeading level={p.headingLevel || 'h2'} className="shared-section-title">{p.heading}</BlockHeading><p className="shared-lead">{p.text}</p><div className="shared-process-note">{p.note}</div></div>
+        <div className="shared-process-rows">{[1,2,3,4,5].map(i=><div className="shared-process-row" key={i}><BlockHeading level={p.rowHeadingLevel || 'h4'} className="shared-process-row-heading">{p['row'+i+'Label']}</BlockHeading><span>{p['row'+i+'Text']}</span></div>)}</div>
+      </div></section>,
+    },
+
+    SkillsGridBlock: {
+      label: 'Skills Grid',
+      fields: {
+        eyebrow:{type:'text',label:'Eyebrow'},heading:{type:'text',label:'Heading'},
+        headingLevel:{...headingLevelField,label:'Heading level'},
+        itemHeadingLevel:{...headingLevelField,label:'Card title level'},
+        text:{type:'text',label:'Description'},
+        item1Title:{type:'text',label:'Item 1 title'},item1Text:{type:'text',label:'Item 1 text'},item2Title:{type:'text',label:'Item 2 title'},item2Text:{type:'text',label:'Item 2 text'},item3Title:{type:'text',label:'Item 3 title'},item3Text:{type:'text',label:'Item 3 text'},item4Title:{type:'text',label:'Item 4 title'},item4Text:{type:'text',label:'Item 4 text'},item5Title:{type:'text',label:'Item 5 title'},item5Text:{type:'text',label:'Item 5 text'},item6Title:{type:'text',label:'Item 6 title'},item6Text:{type:'text',label:'Item 6 text'},
+      },
+      defaultProps: {
+        eyebrow:'Technology',heading:'Tools I use to ship real work.',headingLevel:'h2',itemHeadingLevel:'h4',text:'I prefer showing technologies in the context of what I actually build rather than treating a skills list as the portfolio itself.',
+        item1Title:'Frontend',item1Text:'HTML, CSS, JavaScript, React, Angular, TypeScript, responsive UI and mobile-first design.',
+        item2Title:'Backend & Data',item2Text:'Node, Express, PHP, MySQL, Supabase, REST APIs and data-driven application workflows.',
+        item3Title:'Commerce',item3Text:'Shopify, Shopify POS, Adobe Commerce / Magento, WordPress and ecommerce product workflows.',
+        item4Title:'Delivery',item4Text:'Git, GitHub, Vercel, Linux, QA, deployment, SEO, analytics and AI-assisted development.',
+        item5Title:'UI / UX & Mobile',item5Text:'Responsive interfaces designed around the people actually using the product.',
+        item6Title:'Systems Integration',item6Text:'Connect or simplify what already exists instead of rebuilding everything from scratch.',
+      },
+      render: p => <section className="shared-section shared-skills"><div className="shared-wrap"><div className="shared-eyebrow">{p.eyebrow}</div><BlockHeading level={p.headingLevel || 'h2'} className="shared-section-title">{p.heading}</BlockHeading><p className="shared-lead">{p.text}</p><div className="shared-skill-grid">
+        {[1,2,3,4,5,6].filter(i => p['item'+i+'Title'] || p['item'+i+'Text']).map(i=><div className="shared-skill-card" key={i}><BlockHeading level={p.itemHeadingLevel || 'h4'} className="shared-skill-card-heading">{p['item'+i+'Title']}</BlockHeading><p>{p['item'+i+'Text']}</p></div>)}
+      </div></div></section>,
+    },
+
+    ResumeSkillsBlock: {
+      label: 'RESUME · Skills',
+      fields: {
+        eyebrow:{type:'text',label:'Eyebrow'},
+        heading:{type:'text',label:'Heading'},
+        headingLevel:{...headingLevelField,label:'Heading level'},
+        text:{type:'text',label:'Intro text'},
+        itemHeadingLevel:{...headingLevelField,label:'Card title level'},
+        item1Title:{type:'text',label:'Card 1 title'},item1Text:{type:'textarea',label:'Card 1 description'},item1Tags:{type:'text',label:'Card 1 skill bubbles (comma separated)'},
+        item2Title:{type:'text',label:'Card 2 title'},item2Text:{type:'textarea',label:'Card 2 description'},item2Tags:{type:'text',label:'Card 2 skill bubbles (comma separated)'},
+        item3Title:{type:'text',label:'Card 3 title'},item3Text:{type:'textarea',label:'Card 3 description'},item3Tags:{type:'text',label:'Card 3 skill bubbles (comma separated)'},
+        item4Title:{type:'text',label:'Card 4 title'},item4Text:{type:'textarea',label:'Card 4 description'},item4Tags:{type:'text',label:'Card 4 skill bubbles (comma separated)'},
+        item5Title:{type:'text',label:'Card 5 title'},item5Text:{type:'textarea',label:'Card 5 description'},item5Tags:{type:'text',label:'Card 5 skill bubbles (comma separated)'},
+        item6Title:{type:'text',label:'Card 6 title'},item6Text:{type:'textarea',label:'Card 6 description'},item6Tags:{type:'text',label:'Card 6 skill bubbles (comma separated)'},
+        buttonText:{type:'text',label:'CTA button text'},buttonUrl:{type:'text',label:'CTA button link'},
+      },
+      defaultProps: {
+        eyebrow:'RESUME',
+        heading:'Skills',
+        headingLevel:'h2',
+        itemHeadingLevel:'h4',
+        text:'Development, ecommerce, data, SEO and delivery skills used across real client work and application projects.',
+        item1Title:'Frontend Development',
+        item1Text:'Responsive web interfaces, component-based applications and mobile-first user experiences.',
+        item1Tags:'HTML, CSS, JavaScript, React, Angular, TypeScript, Bootstrap',
+        item2Title:'Backend & Data',
+        item2Text:'APIs, application logic, relational data and cloud-backed application workflows.',
+        item2Tags:'Node, Express, PHP, MySQL, Supabase, REST APIs',
+        item3Title:'Ecommerce',
+        item3Text:'Storefront development, product workflows, integrations, B2B testing and ecommerce operations.',
+        item3Tags:'Shopify, Shopify POS, Adobe Commerce, Magento 2, WordPress',
+        item4Title:'SEO & Digital',
+        item4Text:'Technical and on-page optimization, content architecture, search visibility and ecommerce content.',
+        item4Tags:'Technical SEO, Search Console, Analytics, Product Content, Category Content',
+        item5Title:'Development & Delivery',
+        item5Text:'Source control, deployment, QA, debugging and production delivery.',
+        item5Tags:'Git, GitHub, Vercel, Linux, QA, Deployment',
+        item6Title:'AI-Assisted Development',
+        item6Text:'Using AI throughout research, architecture, prototyping, debugging, iteration and documentation.',
+        item6Tags:'Research, Architecture, Prototyping, Debugging, Refactoring',
+        buttonText:'Explore Skills →',
+        buttonUrl:'/skills',
+      },
+      render: p => <section className="resume-skills-section"><div className="shared-wrap">
+        <div className="resume-skills-head">
+          <div className="resume-skills-title">
+            <div className="shared-eyebrow">{p.eyebrow}</div>
+            <BlockHeading level={p.headingLevel || 'h2'} className="resume-skills-heading">{p.heading}</BlockHeading>
+          </div>
+          <p className="resume-skills-intro">{p.text}</p>
+        </div>
+        <div className="resume-skills-divider"/>
+        <div className="resume-skills-grid">
+          {[1,2,3,4,5,6].filter(i => p['item'+i+'Title'] || p['item'+i+'Text']).map(i => {
+            const tags = String(p['item'+i+'Tags'] || '').split(',').map(v=>v.trim()).filter(Boolean);
+            return <article className="resume-skill-card" key={i}>
+              <BlockHeading level={p.itemHeadingLevel || 'h4'} className="resume-skill-card-title">{p['item'+i+'Title']}</BlockHeading>
+              <p>{p['item'+i+'Text']}</p>
+              {tags.length > 0 && <div className="resume-skill-pills">{tags.map(tag=><span key={tag}>{tag}</span>)}</div>}
+            </article>;
+          })}
+        </div>
+        {p.buttonText && <div className="shared-section-cta"><a className="shared-btn shared-btn-primary" href={p.buttonUrl || '/skills'} onClick={previewClick}>{p.buttonText}</a></div>}
+      </div></section>,
+    },
+
+    ResumeWorkBlock: {
+      label: 'RESUME · Work Experience',
+      fields: {
+        eyebrow:{type:'text',label:'Eyebrow'},
+        heading:{type:'text',label:'Heading'},
+        headingLevel:{...headingLevelField,label:'Heading level'},
+        text:{type:'textarea',label:'Intro text'},
+        itemHeadingLevel:{...headingLevelField,label:'Role title level'},
+
+        item1Logo:{...imageField,label:'Experience 1 logo'},
+        item1Label:{type:'text',label:'Experience 1 label'},
+        item1Company:{type:'text',label:'Experience 1 company'},
+        item1Kicker:{type:'text',label:'Experience 1 category'},
+        item1Title:{type:'text',label:'Experience 1 role title'},
+        item1Text:{type:'textarea',label:'Experience 1 summary'},
+        item1Bullet1:{type:'text',label:'Experience 1 bullet 1'},
+        item1Bullet2:{type:'text',label:'Experience 1 bullet 2'},
+        item1Bullet3:{type:'text',label:'Experience 1 bullet 3'},
+        item1Bullet4:{type:'text',label:'Experience 1 bullet 4'},
+        item1ButtonText:{type:'text',label:'Experience 1 button text'},
+        item1ButtonUrl:{type:'text',label:'Experience 1 button link'},
+
+        item2Logo:{...imageField,label:'Experience 2 logo'},
+        item2Label:{type:'text',label:'Experience 2 label'},
+        item2Company:{type:'text',label:'Experience 2 company'},
+        item2Kicker:{type:'text',label:'Experience 2 category'},
+        item2Title:{type:'text',label:'Experience 2 role title'},
+        item2Text:{type:'textarea',label:'Experience 2 summary'},
+        item2Bullet1:{type:'text',label:'Experience 2 bullet 1'},
+        item2Bullet2:{type:'text',label:'Experience 2 bullet 2'},
+        item2Bullet3:{type:'text',label:'Experience 2 bullet 3'},
+        item2Bullet4:{type:'text',label:'Experience 2 bullet 4'},
+        item2ButtonText:{type:'text',label:'Experience 2 button text'},
+        item2ButtonUrl:{type:'text',label:'Experience 2 button link'},
+      },
+      defaultProps: {
+        eyebrow:'RESUME',
+        heading:'Work Experience',
+        headingLevel:'h1',
+        itemHeadingLevel:'h2',
+        text:'Professional ecommerce and development work focused on improving real business systems, storefronts and customer workflows.',
+        item1Logo:'https://raw.githubusercontent.com/Justindema76/Justin-DeMatteis-Main-Site/main/public/images/projects/wheels-automotive-mark.svg',
+        item1Label:'Professional Experience',
+        item1Company:'Wheels Automotive Dealer Supplies',
+        item1Kicker:'Adobe Commerce / Magento · B2B Ecommerce',
+        item1Title:'Ecommerce Development, Frontend, QA & SEO',
+        item1Text:'Supporting the launch and ongoing improvement of a large B2B automotive dealer-supply ecommerce platform.',
+        item1Bullet1:'Adobe Commerce / Magento frontend and PageBuilder implementation.',
+        item1Bullet2:'B2B account, login, checkout and payment workflow testing.',
+        item1Bullet3:'Product and category SEO, merchandising content and storefront updates.',
+        item1Bullet4:'QA, issue reproduction and coordination with the implementation vendor.',
+        item1ButtonText:'View Wheels case study →',
+        item1ButtonUrl:'/work/wheels-automotive',
+        item2Logo:'https://raw.githubusercontent.com/Justindema76/Justin-DeMatteis-Main-Site/main/public/images/projects/jill-beanstalk-mark.svg',
+        item2Label:'Client Ecommerce',
+        item2Company:'Jill & The Beanstalk',
+        item2Kicker:'Shopify · SEO · Ecommerce Growth',
+        item2Title:'Shopify Management, SEO & Storefront Optimization',
+        item2Text:'Ongoing ecommerce work focused on making the store easier to discover, easier to shop and stronger as an online sales channel.',
+        item2Bullet1:'Shopify storefront improvements, mobile UX and content organization.',
+        item2Bullet2:'Technical and on-page SEO, metadata and search-focused copy.',
+        item2Bullet3:'Product/category content, reviews, onsite search and integrations.',
+        item2Bullet4:'Ongoing troubleshooting, analytics and conversion-focused improvements.',
+        item2ButtonText:'View Jill & The Beanstalk case study →',
+        item2ButtonUrl:'/work/jill-and-the-beanstalk',
+      },
+      render: p => <section className="resume-work-section"><div className="shared-wrap">
+        <div className="resume-work-head">
+          <div>
+            <div className="shared-eyebrow">{p.eyebrow}</div>
+            <BlockHeading level={p.headingLevel || 'h1'} className="resume-work-heading">{p.heading}</BlockHeading>
+          </div>
+          <p className="resume-work-intro">{p.text}</p>
+        </div>
+        <div className="resume-work-divider"/>
+        <div className="resume-work-list">
+          {[1,2].filter(i => p['item'+i+'Company'] || p['item'+i+'Title']).map(i => {
+            const bullets=[1,2,3,4].map(n=>p['item'+i+'Bullet'+n]).filter(Boolean);
+            return <article className="resume-work-card" key={i}>
+              <aside className="resume-work-company">
+                {p['item'+i+'Logo'] && <div className="resume-work-logo"><img src={p['item'+i+'Logo']} alt={p['item'+i+'Company'] || ''}/></div>}
+                <div className="resume-work-company-meta">
+                  <div className="resume-work-label">{p['item'+i+'Label']}</div>
+                  <strong>{p['item'+i+'Company']}</strong>
+                </div>
+              </aside>
+              <div className="resume-work-content">
+                <div className="resume-work-kicker">{p['item'+i+'Kicker']}</div>
+                <BlockHeading level={p.itemHeadingLevel || 'h2'} className="resume-work-role">{p['item'+i+'Title']}</BlockHeading>
+                <p>{p['item'+i+'Text']}</p>
+                {bullets.length>0 && <ul>{bullets.map((b,n)=><li key={n}>{b}</li>)}</ul>}
+                {p['item'+i+'ButtonText'] && <a className="resume-work-link" href={p['item'+i+'ButtonUrl'] || '#'} onClick={previewClick}>{p['item'+i+'ButtonText']}</a>}
+              </div>
+            </article>;
+          })}
+        </div>
+      </div></section>,
+    },
+
+    LargeCtaBlock: {
+      label: 'Large CTA',
+      fields: { eyebrow:{type:'text',label:'Eyebrow'},heading:{type:'text',label:'Heading'},headingLevel:{...headingLevelField,label:'Heading level'},buttonText:{type:'text',label:'Button text'},buttonUrl:{type:'text',label:'Button link'} },
+      defaultProps: { eyebrow:'Open to the right opportunity',heading:'Need someone who can understand the problem and build the solution?',headingLevel:'h2',buttonText:'Get in touch →',buttonUrl:'/contact' },
+      render: p => <section className="shared-large-cta"><div className="shared-wrap shared-large-cta-box"><div><div className="shared-eyebrow">{p.eyebrow}</div><BlockHeading level={p.headingLevel || 'h2'} className="shared-large-cta-heading">{p.heading}</BlockHeading></div>{p.buttonText&&<a className="shared-btn shared-btn-dark" href={p.buttonUrl||'#'} onClick={previewClick}>{p.buttonText}</a>}</div></section>,
+    },
+
+    ProjectCardBlock: {
+      label: 'Project Card',
+      fields: {
+        logo: { ...imageField, label: 'Company / project logo' },
+        logoAlt: { type: 'text', label: 'Logo alt text' },
+        companyLabel: { type: 'text', label: 'Company label' },
+        companyName: { type: 'text', label: 'Company / project name' },
+        category: { type: 'text', label: 'Category' },
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Project headline' },
+        headingLevel: {
+          type: 'select',
+          label: 'Headline HTML tag',
+          options: [
+            { label: 'H1', value: 'h1' },
+            { label: 'H2', value: 'h2' },
+            { label: 'H3', value: 'h3' },
+            { label: 'H4', value: 'h4' },
+          ],
+        },
+        summary: { type: 'textarea', label: 'SEO-friendly project summary' },
+        roleLabel: { type: 'text', label: 'Role label' },
+        roleText: { type: 'text', label: 'Role' },
+        audienceLabel: { type: 'text', label: 'Built for label' },
+        audienceText: { type: 'text', label: 'Built for' },
+        tags: { type: 'text', label: 'Technology tags (comma separated)' },
+        note: { type: 'text', label: 'Supporting note' },
+        buttonText: { type: 'text', label: 'Case study button text' },
+        buttonUrl: { type: 'text', label: 'Case study URL' },
+        panelPosition: {
+          type: 'radio',
+          label: 'Dark panel position',
+          options: [
+            { label: 'Left', value: 'left' },
+            { label: 'Right', value: 'right' },
+          ],
+        },
+        anchorId: { type: 'text', label: 'Section anchor ID' },
+      },
+      defaultProps: {
+        logo: '',
+        logoAlt: '',
+        companyLabel: '',
+        companyName: '',
+        category: '',
+        eyebrow: '',
+        heading: '',
+        headingLevel: 'h2',
+        summary: '',
+        roleLabel: '',
+        roleText: '',
+        audienceLabel: '',
+        audienceText: '',
+        tags: '',
+        note: '',
+        buttonText: '',
+        buttonUrl: '',
+        panelPosition: 'left',
+        anchorId: '',
+      },
+      render: p => {
+        const HeadingTag = ['h1','h2','h3','h4'].includes(p.headingLevel) ? p.headingLevel : 'h2';
+        const tags = String(p.tags || '').split(',').map(tag => tag.trim()).filter(Boolean);
+        return <section id={p.anchorId || undefined} className={`standard-project-card panel-${p.panelPosition || 'left'}`}>
+          <aside className="standard-project-panel">
+            <div className="standard-project-logo">
+              {p.logo ? <img src={p.logo} alt={p.logoAlt || ''}/> : <div className="standard-project-logo-placeholder"><ImageIcon size={34}/></div>}
+            </div>
+            <div>
+              <div className="standard-project-company-label">{p.companyLabel}</div>
+              <div className="standard-project-company-name">{p.companyName}</div>
+              <div className="standard-project-category">{p.category}</div>
+            </div>
+          </aside>
+
+          <div className="standard-project-content">
+            <div className="standard-project-eyebrow">{p.eyebrow}</div>
+            <HeadingTag>{p.heading}</HeadingTag>
+            <p className="standard-project-summary">{p.summary}</p>
+
+            <div className="standard-project-details">
+              <div><span>{p.roleLabel}</span><strong>{p.roleText}</strong></div>
+              <div><span>{p.audienceLabel}</span><strong>{p.audienceText}</strong></div>
+            </div>
+
+            {tags.length > 0 && <div className="standard-project-tags">{tags.map(tag => <span key={tag}>{tag}</span>)}</div>}
+
+            <div className="standard-project-footer">
+              <span>{p.note}</span>
+              {p.buttonText && <a className="standard-project-button" href={p.buttonUrl || '#'} onClick={previewClick}>{p.buttonText}</a>}
+            </div>
+          </div>
+        </section>;
+      },
+    },
+
+
+    SunwingsHeroBlock: {
+      label: 'Sunwings Hero',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        accent: { type: 'text', label: 'Accent text' },
+        text: { type: 'textarea', label: 'Description' },
+        image: imageField,
+        imageAlt: { type: 'text', label: 'Image alt text' },
+        primaryButtonText: { type: 'text', label: 'Primary button text' },
+        primaryButtonAction: { type: 'select', label: 'Primary button action', options: [{label:'Open quote drawer',value:'quote'},{label:'Go to URL',value:'link'}] },
+        primaryButtonUrl: { type: 'text', label: 'Primary button URL' },
+        secondaryButtonText: { type: 'text', label: 'Secondary button text' },
+        secondaryButtonUrl: { type: 'text', label: 'Secondary button URL' },
+        showCallButton: {
+          type: 'radio',
+          label: 'Show phone button when secondary button is blank',
+          options: [{ label: 'Yes', value: true }, { label: 'No', value: false }],
+        },
+        breadcrumbLabel: { type: 'text', label: 'Breadcrumb label' },
+        showBreadcrumbs: {
+          type: 'radio',
+          label: 'Show breadcrumbs on inner pages',
+          options: [{ label: 'Yes', value: true }, { label: 'No', value: false }],
+        },
+        background: { type: 'select', label: 'Section background', options: [{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: {
+        eyebrow: 'Reliable • On-Time • Professional',
+        heading: 'Moving & delivery,',
+        accent: 'done right.',
+        text: 'Residential moves, furniture delivery, junk removal and commercial transport across Toronto, the GTA, Hamilton and Niagara.',
+        image: '',
+        imageAlt: '',
+        primaryButtonText: 'Request a Quote →',
+        primaryButtonAction: 'quote',
+        primaryButtonUrl: '#quote',
+        secondaryButtonText: '',
+        secondaryButtonUrl: '',
+        showCallButton: true,
+        breadcrumbLabel: '',
+        showBreadcrumbs: true,
+        background: 'white',
+      },
+      render: p => <section style={{background:'linear-gradient(160deg,#0B2545,#13315C)',color:'#fff',padding:'58px 44px',borderRadius:18}}>
+        <div style={{fontSize:12,fontWeight:800,letterSpacing:'.12em',textTransform:'uppercase',color:'#FDB833',marginBottom:12}}>{p.eyebrow}</div>
+        <h1 style={{fontSize:44,lineHeight:1.05,margin:'0 0 16px'}}>{p.heading} {p.accent && <span style={{color:'#FDB833'}}>{p.accent}</span>}</h1>
+        {p.text && <p style={{maxWidth:760,color:'#d6e4f5',fontSize:17}}>{p.text}</p>}
+        {p.image && <img src={p.image} alt={p.imageAlt || ''} style={{width:'100%',maxHeight:260,objectFit:'cover',borderRadius:14,marginTop:18}}/>}
+        <div style={{display:'flex',gap:10,marginTop:22,flexWrap:'wrap'}}>
+          {p.primaryButtonText && <span style={{background:'#F7931E',color:'#1b1300',padding:'11px 16px',borderRadius:10,fontWeight:800}}>{p.primaryButtonText}</span>}
+          {(p.secondaryButtonText || p.showCallButton !== false) && <span style={{border:'1px solid rgba(255,255,255,.4)',padding:'11px 16px',borderRadius:10,fontWeight:700}}>{p.secondaryButtonText || 'Call phone from Site Settings'}</span>}
+        </div>
+      </section>,
+    },
+
+    SunwingsTrustBlock: {
+      label: 'Sunwings Trust Strip',
+      fields: {
+        item1Icon: { type:'select', label:'Item 1 icon', options:[{label:'Star',value:'star'},{label:'Dollar',value:'dollar'},{label:'Calendar',value:'calendar'},{label:'Pin',value:'pin'},{label:'Shield',value:'shield'},{label:'Truck',value:'truck'},{label:'Clock',value:'clock'}] },
+        item1Title: { type:'text', label:'Item 1 title' },
+        item1Text: { type:'text', label:'Item 1 text' },
+        item2Icon: { type:'select', label:'Item 2 icon', options:[{label:'Star',value:'star'},{label:'Dollar',value:'dollar'},{label:'Calendar',value:'calendar'},{label:'Pin',value:'pin'},{label:'Shield',value:'shield'},{label:'Truck',value:'truck'},{label:'Clock',value:'clock'}] },
+        item2Title: { type:'text', label:'Item 2 title' },
+        item2Text: { type:'text', label:'Item 2 text' },
+        item3Icon: { type:'select', label:'Item 3 icon', options:[{label:'Star',value:'star'},{label:'Dollar',value:'dollar'},{label:'Calendar',value:'calendar'},{label:'Pin',value:'pin'},{label:'Shield',value:'shield'},{label:'Truck',value:'truck'},{label:'Clock',value:'clock'}] },
+        item3Title: { type:'text', label:'Item 3 title' },
+        item3Text: { type:'text', label:'Item 3 text' },
+        item4Icon: { type:'select', label:'Item 4 icon', options:[{label:'Star',value:'star'},{label:'Dollar',value:'dollar'},{label:'Calendar',value:'calendar'},{label:'Pin',value:'pin'},{label:'Shield',value:'shield'},{label:'Truck',value:'truck'},{label:'Clock',value:'clock'}] },
+        item4Title: { type:'text', label:'Item 4 title' },
+        item4Text: { type:'text', label:'Item 4 text' },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: {
+        item1Icon:'star',item1Title:'Google reviews',item1Text:'Trusted by local customers',
+        item2Icon:'dollar',item2Title:'Price-match guarantee',item2Text:'Fair, upfront quotes',
+        item3Icon:'calendar',item3Title:'Flexible scheduling',item3Text:'Evenings & weekends',
+        item4Icon:'pin',item4Title:'Toronto to Niagara',item4Text:'GTA, Hamilton & beyond',
+        background:'white',
+      },
+      render: p => <section style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,padding:18,background:'#fff',border:'1px solid #E3E9F2',borderRadius:16}}>
+        {[1,2,3,4].map(n => <div key={n} style={{padding:14,border:'1px solid #E3E9F2',borderRadius:12,color:'#0B2545'}}><b>{p[`item${n}Title`]}</b><small style={{display:'block',marginTop:4,color:'#64748b'}}>{p[`item${n}Text`]}</small></div>)}
+      </section>,
+    },
+
+    SunwingsServicesGridBlock: {
+      label: 'Service Posts Grid',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'textarea', label: 'Description' },
+        align: { type:'radio', label:'Heading alignment', options:[{label:'Centre',value:'center'},{label:'Left',value:'left'}] },
+        limit: { type:'text', label:'Maximum services (0 = all)' },
+        buttonText: { type:'text', label:'Bottom link text' },
+        buttonUrl: { type:'text', label:'Bottom link URL' },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: { eyebrow:'What we do',heading:'One call for every move.',text:'From a single couch to a full warehouse transfer, Sunwings brings the truck, the crew and the care.',align:'center',limit:'0',buttonText:'',buttonUrl:'/services',background:'white' },
+      render: p => <section style={{padding:'36px 8px',background:p.background==='soft'?'#F6F8FB':'#fff'}}>
+        <div style={{textAlign:p.align==='left'?'left':'center'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase',letterSpacing:'.12em'}}>{p.eyebrow}</div><h2 style={{fontSize:34,margin:'6px 0'}}>{p.heading}</h2><p style={{color:'#5B6B82'}}>{p.text}</p></div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginTop:20}}>{['Residential Moving','Furniture Delivery','Commercial Transport','Packing & Protection','Warehouse & Container Unloading','Junk Removal'].slice(0,Number(p.limit||0)>0?Number(p.limit):6).map(item => <div key={item} style={{padding:20,border:'1px solid #E3E9F2',borderRadius:14,background:'#fff',fontWeight:800}}>{item}<small style={{display:'block',marginTop:6,color:'#64748b',fontWeight:500}}>Pulled from Service Posts</small></div>)}</div>
+      </section>,
+    },
+
+    SunwingsStepsBlock: {
+      label: 'How It Works',
+      fields: {
+        eyebrow: { type:'text', label:'Eyebrow' },
+        heading: { type:'text', label:'Heading' },
+        text: { type:'textarea', label:'Description' },
+        step1Title: { type:'text', label:'Step 1 title' },
+        step1Text: { type:'textarea', label:'Step 1 text' },
+        step2Title: { type:'text', label:'Step 2 title' },
+        step2Text: { type:'textarea', label:'Step 2 text' },
+        step3Title: { type:'text', label:'Step 3 title' },
+        step3Text: { type:'textarea', label:'Step 3 text' },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: {
+        eyebrow:'How it works',heading:'Booked in three steps.',text:'',
+        step1Title:'Tell us the job',step1Text:'Send pickup, drop-off, date and what’s moving. Takes about two minutes.',
+        step2Title:'Get your price',step2Text:'We confirm the details and send a clear, upfront quote. No hidden fees.',
+        step3Title:'We move it',step3Text:'The crew shows up on time, protects everything and places it where you want it.',
+        background:'soft',
+      },
+      render: p => <section style={{padding:'36px 8px',background:p.background==='soft'?'#F6F8FB':'#fff'}}>
+        <div style={{textAlign:'center'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:34,margin:'6px 0'}}>{p.heading}</h2>{p.text&&<p style={{color:'#5B6B82'}}>{p.text}</p>}</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginTop:22}}>{[1,2,3].map(n => <div key={n} style={{padding:20,border:'1px solid #E3E9F2',borderRadius:14,background:'#fff'}}><b>{n}. {p[`step${n}Title`]}</b><p style={{color:'#64748b'}}>{p[`step${n}Text`]}</p></div>)}</div>
+      </section>,
+    },
+
+    SunwingsSplitFeatureBlock: {
+      label: 'Image + Checklist Feature',
+      fields: {
+        eyebrow: { type:'text', label:'Eyebrow' },
+        heading: { type:'text', label:'Heading' },
+        text: { type:'textarea', label:'Description' },
+        image: imageField,
+        imageAlt: { type:'text', label:'Image alt text' },
+        imagePosition: { type:'radio', label:'Image position', options:[{label:'Left',value:'left'},{label:'Right',value:'right'}] },
+        checklist: { type:'textarea', label:'Checklist (one item per line)' },
+        buttonText: { type:'text', label:'Button text' },
+        buttonUrl: { type:'text', label:'Button URL' },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: { eyebrow:'For businesses',heading:'A transport partner you can schedule on.',text:'Retailers, warehouses, contractors and property managers use Sunwings for one-off projects and recurring routes.',image:'',imageAlt:'',imagePosition:'left',checklist:'Warehouse transfers\nContainer unloading\nRetail deliveries\nOffice relocations\nEquipment transport\nRecurring routes',buttonText:'Commercial transport →',buttonUrl:'/services/commercial-transport',background:'white' },
+      render: p => <section style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:28,alignItems:'center',padding:28,background:p.background==='soft'?'#F6F8FB':'#fff'}}>
+        <div style={{order:p.imagePosition==='right'?2:1}}>{p.image?<img src={p.image} alt={p.imageAlt||''} style={{width:'100%',borderRadius:16}}/>:<div style={{height:240,background:'#E8F1FB',borderRadius:16,display:'grid',placeItems:'center'}}>Choose an image</div>}</div>
+        <div style={{order:p.imagePosition==='right'?1:2}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:32}}>{p.heading}</h2><p style={{color:'#5B6B82'}}>{p.text}</p><ul>{String(p.checklist||'').split('\n').filter(Boolean).map(item=><li key={item}>{item}</li>)}</ul>{p.buttonText&&<b>{p.buttonText}</b>}</div>
+      </section>,
+    },
+
+    SunwingsPriceBandBlock: {
+      label: 'Price Band',
+      fields: {
+        eyebrow: { type:'text', label:'Eyebrow' },
+        heading: { type:'text', label:'Heading' },
+        text: { type:'textarea', label:'Description' },
+        buttonText: { type:'text', label:'Button text' },
+        buttonUrl: { type:'text', label:'Button URL' },
+        card1Label: { type:'text', label:'Card 1 label' },
+        card1Value: { type:'text', label:'Card 1 value' },
+        card1Note: { type:'text', label:'Card 1 note' },
+        card2Label: { type:'text', label:'Card 2 label' },
+        card2Value: { type:'text', label:'Card 2 value' },
+        card2Note: { type:'text', label:'Card 2 note' },
+        removeTopSpace: { type:'radio', label:'Remove top spacing', options:[{label:'Yes',value:true},{label:'No',value:false}] },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: { eyebrow:'Pricing',heading:'Straight answers on price.',text:'Every quote is based on crew size, truck time and distance. Found a lower written quote? We’ll match it.',buttonText:'See pricing →',buttonUrl:'/pricing',card1Label:'Small moves & deliveries',card1Value:'Get a quote',card1Note:'single items, studios',card2Label:'Truck + crew',card2Value:'Upfront pricing',card2Note:'based on your job',removeTopSpace:true,background:'white' },
+      render: p => <section style={{background:'#0B2545',color:'#fff',padding:30,borderRadius:18}}><div style={{color:'#FDB833',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:32}}>{p.heading}</h2><p style={{color:'#c9d9ee'}}>{p.text}</p><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:18}}>{[1,2].map(n=><div key={n} style={{padding:16,background:'rgba(255,255,255,.08)',borderRadius:12}}><small>{p[`card${n}Label`]}</small><b style={{display:'block',fontSize:22}}>{p[`card${n}Value`]}</b><small>{p[`card${n}Note`]}</small></div>)}</div></section>,
+    },
+
+    SunwingsPricingFactorsBlock: {
+      label: 'Pricing Factors + Guarantee',
+      fields: {
+        eyebrow:{type:'text',label:'Eyebrow'},
+        heading:{type:'text',label:'Heading'},
+        text:{type:'textarea',label:'Description'},
+        checklist:{type:'textarea',label:'Pricing factors (one per line)'},
+        guaranteeEyebrow:{type:'text',label:'Guarantee eyebrow'},
+        guaranteeHeading:{type:'text',label:'Guarantee heading'},
+        guaranteeText:{type:'textarea',label:'Guarantee text'},
+        background:{type:'select',label:'Section background',options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}]},
+      },
+      defaultProps:{
+        eyebrow:'What affects your price',
+        heading:'No surprises on the bill.',
+        text:'',
+        checklist:'Crew size and hours on the job\nDistance between pickup and drop-off\nStairs, long carries and elevator wait times\nPacking, wrapping and specialty items',
+        guaranteeEyebrow:'Price-match guarantee',
+        guaranteeHeading:'Found a lower written quote?',
+        guaranteeText:'Show us a lower written quote for the same job and we’ll match it.',
+        background:'soft',
+      },
+      render:p=><section style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,padding:28,background:p.background==='soft'?'#F6F8FB':'#fff'}}>
+        <div><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2>{p.heading}</h2>{p.text&&<p style={{color:'#64748b'}}>{p.text}</p>}<ul>{String(p.checklist||'').split('\n').filter(Boolean).map(item=><li key={item}>{item}</li>)}</ul></div>
+        <div style={{background:'#0B2545',color:'#fff',padding:28,borderRadius:18}}><div style={{color:'#FDB833',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.guaranteeEyebrow}</div><h2 style={{fontSize:30}}>{p.guaranteeHeading}</h2><p style={{color:'#c9d9ee'}}>{p.guaranteeText}</p></div>
+      </section>,
+    },
+
+    SunwingsPricingCardsBlock: {
+      label: 'Pricing Cards',
+      fields: {
+        eyebrow: { type:'text', label:'Eyebrow' },
+        heading: { type:'text', label:'Heading' },
+        text: { type:'textarea', label:'Description' },
+        featuredCard: { type:'select', label:'Featured card', options:[{label:'Card 1',value:'1'},{label:'Card 2',value:'2'},{label:'Card 3',value:'3'}] },
+        card1Title:{type:'text',label:'Card 1 title'},card1Subtitle:{type:'text',label:'Card 1 subtitle'},card1Amount:{type:'text',label:'Card 1 amount'},card1Note:{type:'text',label:'Card 1 note'},card1Features:{type:'textarea',label:'Card 1 features (one per line)'},card1ButtonText:{type:'text',label:'Card 1 button text'},card1ButtonAction:{type:'select',label:'Card 1 button action',options:[{label:'Open quote drawer',value:'quote'},{label:'Go to URL',value:'link'}]},card1ButtonUrl:{type:'text',label:'Card 1 button URL'},
+        card2Title:{type:'text',label:'Card 2 title'},card2Subtitle:{type:'text',label:'Card 2 subtitle'},card2Amount:{type:'text',label:'Card 2 amount'},card2Note:{type:'text',label:'Card 2 note'},card2Features:{type:'textarea',label:'Card 2 features (one per line)'},card2ButtonText:{type:'text',label:'Card 2 button text'},card2ButtonAction:{type:'select',label:'Card 2 button action',options:[{label:'Open quote drawer',value:'quote'},{label:'Go to URL',value:'link'}]},card2ButtonUrl:{type:'text',label:'Card 2 button URL'},
+        card3Title:{type:'text',label:'Card 3 title'},card3Subtitle:{type:'text',label:'Card 3 subtitle'},card3Amount:{type:'text',label:'Card 3 amount'},card3Note:{type:'text',label:'Card 3 note'},card3Features:{type:'textarea',label:'Card 3 features (one per line)'},card3ButtonText:{type:'text',label:'Card 3 button text'},card3ButtonAction:{type:'select',label:'Card 3 button action',options:[{label:'Open quote drawer',value:'quote'},{label:'Go to URL',value:'link'}]},card3ButtonUrl:{type:'text',label:'Card 3 button URL'},
+        footnote: { type:'text', label:'Footnote' },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: {
+        eyebrow:'Pricing',heading:'Straight answers on price.',text:'',featuredCard:'2',
+        card1Title:'Small moves & delivery',card1Subtitle:'Single items, Marketplace pickups, studios',card1Amount:'Quote',card1Note:'based on the job',card1Features:'1–2 movers\nCargo van\nBlanket wrapping\nPlacement in room',card1ButtonText:'Request a Quote',card1ButtonAction:'quote',card1ButtonUrl:'#quote',
+        card2Title:'Truck + 2 movers',card2Subtitle:'Most 1–2 bedroom moves',card2Amount:'Quote',card2Note:'upfront pricing',card2Features:'2 movers\nTruck & equipment\nWrapping & protection\nDisassembly & reassembly',card2ButtonText:'Request a Quote',card2ButtonAction:'quote',card2ButtonUrl:'#quote',
+        card3Title:'Larger moves',card3Subtitle:'Houses, commercial and larger jobs',card3Amount:'Quote',card3Note:'based on crew and time',card3Features:'Larger crew\nTruck & equipment\nWrapping & protection\nBuilt for bigger jobs',card3ButtonText:'Request a Quote',card3ButtonAction:'quote',card3ButtonUrl:'#quote',
+        footnote:'',background:'white',
+      },
+      render: p => <section style={{padding:28,background:p.background==='soft'?'#F6F8FB':'#fff'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:32}}>{p.heading}</h2><p style={{color:'#5B6B82'}}>{p.text}</p><div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginTop:18}}>{[1,2,3].map(n=><div key={n} style={{padding:18,border:n===Number(p.featuredCard)?'2px solid #F7931E':'1px solid #E3E9F2',borderRadius:14,background:'#fff'}}><b>{p[`card${n}Title`]}</b><small style={{display:'block',color:'#64748b'}}>{p[`card${n}Subtitle`]}</small><strong style={{display:'block',fontSize:24,marginTop:8}}>{p[`card${n}Amount`]}</strong></div>)}</div></section>,
+    },
+
+    SunwingsLocationsGridBlock: {
+      label: 'Location Posts Grid',
+      fields: {
+        eyebrow: { type:'text', label:'Eyebrow' },
+        heading: { type:'text', label:'Heading' },
+        text: { type:'textarea', label:'Description' },
+        detailed: { type:'radio', label:'Layout', options:[{label:'Compact',value:false},{label:'Detailed',value:true}] },
+        buttonText: { type:'text', label:'Bottom link text' },
+        buttonUrl: { type:'text', label:'Bottom link URL' },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: { eyebrow:'Service areas',heading:'From Toronto to Niagara.',text:'Local crews who know the buildings, highways and condo elevator rules.',detailed:false,buttonText:'',buttonUrl:'/locations',background:'white' },
+      render: p => <section style={{padding:'36px 8px',background:p.background==='soft'?'#F6F8FB':'#fff'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:34,margin:'6px 0'}}>{p.heading}</h2><p style={{color:'#5B6B82'}}>{p.text}</p><div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginTop:18}}>{['Toronto','GTA','Halton & Hamilton','Niagara'].map(item=><div key={item} style={{padding:18,border:'1px solid #E3E9F2',borderRadius:12,background:'#fff'}}><b>{item}</b><small style={{display:'block',marginTop:6,color:'#64748b'}}>Pulled from Location Posts</small></div>)}</div></section>,
+    },
+
+    SunwingsReviewsBlock: {
+      label: 'Reviews',
+      fields: {
+        eyebrow: { type:'text', label:'Eyebrow' },
+        heading: { type:'text', label:'Heading' },
+        review1Text:{type:'textarea',label:'Review 1 text'},review1Name:{type:'text',label:'Review 1 name'},review1Stars:{type:'select',label:'Review 1 stars',options:[1,2,3,4,5].map(n=>({label:String(n),value:String(n)}))},
+        review2Text:{type:'textarea',label:'Review 2 text'},review2Name:{type:'text',label:'Review 2 name'},review2Stars:{type:'select',label:'Review 2 stars',options:[1,2,3,4,5].map(n=>({label:String(n),value:String(n)}))},
+        review3Text:{type:'textarea',label:'Review 3 text'},review3Name:{type:'text',label:'Review 3 name'},review3Stars:{type:'select',label:'Review 3 stars',options:[1,2,3,4,5].map(n=>({label:String(n),value:String(n)}))},
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: { eyebrow:'Reviews',heading:'What customers say.',review1Text:'',review1Name:'',review1Stars:'5',review2Text:'',review2Name:'',review2Stars:'5',review3Text:'',review3Name:'',review3Stars:'5',background:'soft' },
+      render: p => <section style={{padding:'36px 8px',background:p.background==='soft'?'#F6F8FB':'#fff'}}><div style={{textAlign:'center'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:34}}>{p.heading}</h2></div><div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginTop:18}}>{[1,2,3].map(n=>p[`review${n}Text`]?<div key={n} style={{padding:18,border:'1px solid #E3E9F2',borderRadius:12,background:'#fff'}}><div>{'★'.repeat(Number(p[`review${n}Stars`]||5))}</div><p>{p[`review${n}Text`]}</p><b>{p[`review${n}Name`]}</b></div>:null)}</div></section>,
+    },
+
+    SunwingsBlogGridBlock: {
+      label: 'Moving Tips Grid',
+      fields: {
+        eyebrow: { type:'text', label:'Eyebrow' },
+        heading: { type:'text', label:'Heading' },
+        limit: { type:'text', label:'Maximum posts' },
+        showCategories: { type:'radio', label:'Show category filters', options:[{label:'Yes',value:true},{label:'No',value:false}] },
+        background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+      },
+      defaultProps: { eyebrow:'Moving tips',heading:'From the Sunwings blog.',limit:'3',showCategories:false,background:'white' },
+      render: p => <section style={{padding:'36px 8px',background:p.background==='soft'?'#F6F8FB':'#fff'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:34}}>{p.heading}</h2><div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginTop:18}}>{Array.from({length:Math.min(3,Number(p.limit||3))},(_,i)=><div key={i} style={{padding:18,border:'1px solid #E3E9F2',borderRadius:12}}>Published Moving Tip {i+1}</div>)}</div></section>,
+    },
+
+    SunwingsFaqBlock: {
+      label: 'FAQ',
+      fields: {
+        eyebrow:{type:'text',label:'Eyebrow'},heading:{type:'text',label:'Heading'},
+        question1:{type:'text',label:'Question 1'},answer1:{type:'textarea',label:'Answer 1'},
+        question2:{type:'text',label:'Question 2'},answer2:{type:'textarea',label:'Answer 2'},
+        question3:{type:'text',label:'Question 3'},answer3:{type:'textarea',label:'Answer 3'},
+        question4:{type:'text',label:'Question 4'},answer4:{type:'textarea',label:'Answer 4'},
+        question5:{type:'text',label:'Question 5'},answer5:{type:'textarea',label:'Answer 5'},
+        question6:{type:'text',label:'Question 6'},answer6:{type:'textarea',label:'Answer 6'},
+        question7:{type:'text',label:'Question 7'},answer7:{type:'textarea',label:'Answer 7'},
+        question8:{type:'text',label:'Question 8'},answer8:{type:'textarea',label:'Answer 8'},
+        background:{type:'select',label:'Section background',options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}]},
+      },
+      defaultProps:{eyebrow:'FAQ',heading:'Frequently asked questions.',question1:'',answer1:'',question2:'',answer2:'',question3:'',answer3:'',question4:'',answer4:'',question5:'',answer5:'',question6:'',answer6:'',question7:'',answer7:'',question8:'',answer8:'',background:'white'},
+      render:p=><section style={{padding:28,background:p.background==='soft'?'#F6F8FB':'#fff'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2>{p.heading}</h2>{[1,2,3,4,5,6,7,8].map(n=>p[`question${n}`]?<div key={n} style={{padding:'12px 0',borderBottom:'1px solid #E3E9F2'}}><b>{p[`question${n}`]}</b><p style={{color:'#64748b'}}>{p[`answer${n}`]}</p></div>:null)}</section>,
+    },
+
+    SunwingsContactBlock: {
+      label: 'Contact Form + Details',
+      fields: {
+        formTitle:{type:'text',label:'Form heading'},
+        formText:{type:'textarea',label:'Form description'},
+        callTitle:{type:'text',label:'Call title'},
+        hoursTitle:{type:'text',label:'Hours title'},
+        hours:{type:'textarea',label:'Hours'},
+        areaTitle:{type:'text',label:'Area title'},
+        areaText:{type:'textarea',label:'Area text'},
+        background:{type:'select',label:'Section background',options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}]},
+      },
+      defaultProps:{
+        formTitle:'Contact Sunwings',
+        formText:'Send us a message and we’ll get back to you.',
+        callTitle:'Call or text',
+        hoursTitle:'Hours',
+        hours:'',
+        areaTitle:'Service area',
+        areaText:'Toronto, the GTA, Halton, Hamilton & Niagara',
+        background:'white',
+      },
+      render:p=><section style={{display:'grid',gridTemplateColumns:'1.2fr .8fr',gap:18,padding:28,background:p.background==='soft'?'#F6F8FB':'#fff'}}><div style={{padding:22,border:'1px solid #E3E9F2',borderRadius:14}}><b style={{fontSize:20}}>{p.formTitle}</b><p style={{color:'#5B6B82'}}>{p.formText}</p><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:16}}>{['Name','Phone'].map(item=><div key={item} style={{height:42,border:'1px solid #D5DEEA',borderRadius:9,padding:'10px 12px',color:'#94a3b8'}}>{item}</div>)}</div><div style={{height:42,border:'1px solid #D5DEEA',borderRadius:9,padding:'10px 12px',color:'#94a3b8',marginTop:10}}>Service</div><div style={{height:100,border:'1px solid #D5DEEA',borderRadius:9,padding:'10px 12px',color:'#94a3b8',marginTop:10}}>Message</div></div><div style={{display:'grid',gap:10}}><div style={{padding:16,border:'1px solid #E3E9F2',borderRadius:12}}><b>{p.callTitle}</b></div>{p.hours?<div style={{padding:16,border:'1px solid #E3E9F2',borderRadius:12}}><b>{p.hoursTitle||'Hours'}</b><p>{p.hours}</p></div>:null}<div style={{padding:16,border:'1px solid #E3E9F2',borderRadius:12}}><b>{p.areaTitle}</b><p>{p.areaText}</p></div></div></section>,
+    },
+
+    SunwingsQuoteFormBlock: {
+      label: 'Quick Quote Form',
+      fields: {
+        eyebrow:{type:'text',label:'Eyebrow'},heading:{type:'text',label:'Heading'},text:{type:'textarea',label:'Description'},buttonText:{type:'text',label:'Optional button text'},buttonAction:{type:'select',label:'Optional button action',options:[{label:'Open quote drawer',value:'quote'},{label:'Go to URL',value:'link'}]},buttonUrl:{type:'text',label:'Optional button URL'},
+        compact:{type:'radio',label:'Compact form',options:[{label:'Yes',value:true},{label:'No',value:false}]},
+        background:{type:'select',label:'Section background',options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}]},
+      },
+      defaultProps:{eyebrow:'Quick quote',heading:'Tell us the basics.',text:'Send the essentials and we’ll follow up for anything else.',buttonText:'',buttonAction:'quote',buttonUrl:'#quote',compact:true,background:'soft'},
+      render:p=><section style={{padding:28,border:'1px solid #E3E9F2',borderRadius:18,background:p.background==='soft'?'#F6F8FB':'#fff'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase'}}>{p.eyebrow}</div><h2 style={{fontSize:30}}>{p.heading}</h2><p style={{color:'#5B6B82'}}>{p.text}</p><div style={{display:'grid',gridTemplateColumns:p.compact?'1fr':'1fr 1fr',gap:10,marginTop:18}}>{['Name','Phone','Email','Service','Moving from','Moving to'].map(item=><div key={item} style={{height:42,border:'1px solid #D5DEEA',borderRadius:9,background:'#FBFCFE',padding:'10px 12px',color:'#94a3b8'}}>{item}</div>)}</div></section>,
+    },
+
+    SunwingsRichTextBlock: {
+      label: 'Rich Text / Policy',
+      fields: {
+        heading:{type:'text',label:'Heading'},body:{type:'textarea',label:'Body text or HTML'},maxWidth:{type:'select',label:'Content width',options:[{label:'720px',value:'720'},{label:'820px',value:'820'},{label:'1000px',value:'1000'},{label:'Full',value:'1200'}]},
+        background:{type:'select',label:'Section background',options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}]},
+      },
+      defaultProps:{heading:'',body:'',maxWidth:'820',background:'white'},
+      render:p=><section style={{padding:28,maxWidth:Number(p.maxWidth||820),margin:'0 auto',background:p.background==='soft'?'#F6F8FB':'#fff'}}>{p.heading&&<h2>{p.heading}</h2>}<div style={{whiteSpace:'pre-wrap',color:'#33415c'}}>{p.body}</div></section>,
+    },
+
+    HeroBlock: {
+      label: 'Hero',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        headingLevel: { ...headingLevelField, label: 'Heading level' },
+        accent: { type: 'text', label: 'Accent text (optional)' },
+        text: { type: 'text', label: 'Description' },
+        primaryButtonText: { type: 'text', label: 'Primary button text' },
+        primaryButtonUrl: { type: 'text', label: 'Primary button link' },
+        secondaryButtonText: { type: 'text', label: 'Secondary button text' },
+        secondaryButtonUrl: { type: 'text', label: 'Secondary button link' },
+        note: { type: 'text', label: 'Small note (optional)' },
+        image: imageField,
+        imageAlt: { type: 'text', label: 'Image alt text' },
+        background: { type: 'select', label: 'Background', options: backgroundOptions },
+      },
+      defaultProps: {
+        eyebrow: '',
+        heading: '',
+        headingLevel: 'h1',
+        accent: '',
+        text: '',
+        primaryButtonText: '',
+        primaryButtonAction: 'link',
+        primaryButtonUrl: '',
+        secondaryButtonText: '',
+        secondaryButtonUrl: '',
+        note: '',
+        image: '',
+        imageAlt: '',
+        background: 'light',
+      },
+      render: rawProps => {
+        const props = {
+          ...rawProps,
+          primaryButtonText: rawProps.primaryButtonText ?? rawProps.buttonText ?? '',
+          primaryButtonUrl: rawProps.primaryButtonUrl ?? rawProps.buttonUrl ?? '',
+        };
+        const hasActions = Boolean(props.primaryButtonText || props.secondaryButtonText);
+        const actions = hasActions ? <div className="shared-showcase-actions jci-builder-hero-actions">
+          {props.primaryButtonText && <a className="shared-btn shared-btn-primary" href={props.primaryButtonUrl || '#'} onClick={previewClick}>{props.primaryButtonText}</a>}
+          {props.secondaryButtonText && <a className="shared-btn shared-btn-secondary" href={props.secondaryButtonUrl || '#'} onClick={previewClick}>{props.secondaryButtonText}</a>}
+        </div> : null;
+
+        return <section className={`jci-builder-section jci-builder-hero showcase-style-hero theme-${props.background || 'light'} ${props.image ? 'with-media' : 'without-media'}`}>
+          <div className="jci-builder-hero-copy">
+            {props.eyebrow && <p className="jci-builder-eyebrow">{props.eyebrow}</p>}
+            <BlockHeading level={props.headingLevel || 'h1'} className="jci-builder-hero-heading">{props.heading}{props.accent ? <> <span>{props.accent}</span></> : null}</BlockHeading>
+            {props.text && <p>{props.text}</p>}
+            {!props.image && actions}
+            {props.note && <div className="shared-showcase-note">{props.note}</div>}
+          </div>
+          {props.image && <div className="jci-builder-hero-media">
+            <img src={props.image} alt={props.imageAlt || ''}/>
+            {actions}
+          </div>}
+        </section>;
+      },
+    },
+    HeadingBlock: {
+      label: 'Heading',
+      fields: {
+        text: { type: 'text', label: 'Heading' },
+        level: {
+          type: 'select',
+          label: 'Heading level',
+          options: headingLevelOptions,
+        },
+        align: {
+          type: 'radio',
+          label: 'Alignment',
+          options: [
+            { label: 'Left', value: 'left' },
+            { label: 'Centre', value: 'center' },
+            { label: 'Right', value: 'right' },
+          ],
+        },
+      },
+      defaultProps: { text: '', level: 'h2', align: 'left' },
+      render: ({ text, level = 'h2', align = 'left' }) => {
+        const Tag = level;
+        return <div className="jci-builder-heading-wrap" style={{ textAlign: align }}><Tag>{text}</Tag></div>;
+      },
+    },
+    TextBlock: {
+      label: 'Text',
+      fields: {
+        text: { type: 'text', label: 'Text' },
+        align: {
+          type: 'radio',
+          label: 'Alignment',
+          options: [
+            { label: 'Left', value: 'left' },
+            { label: 'Centre', value: 'center' },
+          ],
+        },
+      },
+      defaultProps: { text: '', align: 'left' },
+      render: ({ text, align = 'left' }) => <div className="jci-builder-text" style={{ textAlign: align }}><p>{text}</p></div>,
+    },
+    ImageBlock: {
+      label: 'Image',
+      fields: {
+        image: imageField,
+        alt: { type: 'text', label: 'Alt text' },
+        width: {
+          type: 'select',
+          label: 'Width',
+          options: [
+            { label: '50%', value: '50' },
+            { label: '75%', value: '75' },
+            { label: '100%', value: '100' },
+          ],
+        },
+      },
+      defaultProps: { image: '', alt: '', width: '100' },
+      render: ({ image, alt, width = '100' }) => <div className="jci-builder-image-wrap">
+        {image
+          ? <img src={image} alt={alt || ''} style={{ width: `${width}%` }}/>
+          : <div className="jci-builder-placeholder"><ImageIcon size={34}/><span>Choose an image</span></div>}
+      </div>,
+    },
+    ImageTextBlock: {
+      label: 'Image + Text',
+      fields: {
+        image: imageField,
+        alt: { type: 'text', label: 'Image alt text' },
+        heading: { type: 'text', label: 'Heading' },
+        headingLevel: { ...headingLevelField, label: 'Heading level' },
+        text: { type: 'text', label: 'Text' },
+        imagePosition: {
+          type: 'radio',
+          label: 'Image position',
+          options: [
+            { label: 'Left', value: 'left' },
+            { label: 'Right', value: 'right' },
+          ],
+        },
+        background: { type: 'select', label: 'Background', options: backgroundOptions },
+      },
+      defaultProps: {
+        image: '',
+        alt: '',
+        heading: '',
+        headingLevel: 'h2',
+        text: '',
+        imagePosition: 'left',
+        background: 'white',
+      },
+      render: ({ image, alt, heading, headingLevel = 'h2', text, imagePosition = 'left', background = 'white' }) => <section className={`jci-builder-section jci-builder-image-text theme-${background} image-${imagePosition}`}>
+        <div className="jci-builder-image-text-media">
+          {image
+            ? <img src={image} alt={alt || ''}/>
+            : <div className="jci-builder-placeholder"><ImageIcon size={34}/><span>Choose an image</span></div>}
+        </div>
+        <div className="jci-builder-image-text-copy"><BlockHeading level={headingLevel} className="jci-builder-image-text-heading">{heading}</BlockHeading><p>{text}</p></div>
+      </section>,
+    },
+    ServiceRequestBlock: {
+      label: 'Service Request Form',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'textarea', label: 'Intro text' },
+        serviceOptions: { type: 'textarea', label: 'Service options (value|label, comma separated)' },
+        submitButtonText: { type: 'text', label: 'Submit button text' },
+        successHeading: { type: 'text', label: 'Success heading' },
+        successText: { type: 'textarea', label: 'Success text' },
+        background: { type: 'select', label: 'Background', options: backgroundOptions },
+      },
+      defaultProps: {
+        eyebrow: 'Start a project',
+        heading: 'Tell me what you need.',
+        text: 'Describe the problem, the systems involved, and what you want to improve.',
+        serviceOptions: 'website_wordpress|Website / WordPress, wordpress_plugin|Custom WordPress Plugin, shopify_ecommerce|Shopify / Ecommerce, ai_automation|AI Automation, api_integration|API Integration, custom_web_app|Custom Web App, seo_digital|SEO / Digital Marketing, not_sure|Not sure yet',
+        submitButtonText: 'Send service request',
+        successHeading: 'Request received.',
+        successText: 'I have your project details and will review the request.',
+        background: 'white',
+      },
+      render: rawProps => {
+        const props = {
+          eyebrow: 'Start a project',
+          heading: 'Tell me what you need.',
+          text: 'Describe the problem, the systems involved, and what you want to improve.',
+          submitButtonText: 'Send service request',
+          background: 'white',
+          ...rawProps,
+        };
+
+        return <section className={`jci-builder-section theme-${props.background || 'white'}`}>
+          <div className="jci-builder-eyebrow">{props.eyebrow}</div>
+          <h2 style={{margin:'8px 0 10px'}}>{props.heading}</h2>
+          <p>{props.text}</p>
+          <div style={{display:'grid',gap:'10px',marginTop:'18px',padding:'18px',border:'1px solid #d7dce1',borderRadius:'12px',background:'#fff'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+              <div style={{height:'42px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+              <div style={{height:'42px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+            </div>
+            <div style={{height:'42px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+            <div style={{height:'110px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+            <span className="jci-builder-button" style={{width:'max-content'}}>{props.submitButtonText}</span>
+          </div>
+        </section>;
+      },
+    },
+    HiringContactBlock: {
+      label: 'Hiring / Interview Contact',
+      fields: {
+        eyebrow: { type: 'text', label: 'Eyebrow' },
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'textarea', label: 'Intro text' },
+        submitButtonText: { type: 'text', label: 'Submit button text' },
+        successHeading: { type: 'text', label: 'Success heading' },
+        successText: { type: 'textarea', label: 'Success text' },
+        background: { type: 'select', label: 'Background', options: backgroundOptions },
+      },
+      defaultProps: {
+        eyebrow: 'Hiring & interviews',
+        heading: 'Interested in interviewing or hiring me?',
+        text: 'Use this form for job opportunities, interview requests or recruiter contact. Sales and service pitches are filtered.',
+        submitButtonText: 'Contact Justin',
+        successHeading: 'Message received.',
+        successText: 'Thanks. I received your employment-related message and will review it.',
+        background: 'white',
+      },
+      render: rawProps => {
+        const props = {
+          eyebrow: 'Hiring & interviews',
+          heading: 'Interested in interviewing or hiring me?',
+          text: 'Use this form for job opportunities, interview requests or recruiter contact. Sales and service pitches are filtered.',
+          submitButtonText: 'Contact Justin',
+          background: 'white',
+          ...rawProps,
+        };
+
+        return <section className={`jci-builder-section theme-${props.background || 'white'}`}>
+          <div className="jci-builder-eyebrow">{props.eyebrow}</div>
+          <h2 style={{margin:'8px 0 10px'}}>{props.heading}</h2>
+          <p>{props.text}</p>
+          <div style={{display:'grid',gap:'10px',marginTop:'18px',padding:'18px',border:'1px solid #d7dce1',borderRadius:'12px',background:'#fff'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+              <div style={{height:'42px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+              <div style={{height:'42px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+              <div style={{height:'42px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+              <div style={{height:'42px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+            </div>
+            <div style={{height:'110px',border:'1px solid #d7dce1',borderRadius:'8px',background:'#f8fafc'}} />
+            <span className="jci-builder-button" style={{width:'max-content'}}>{props.submitButtonText}</span>
+          </div>
+        </section>;
+      },
+    },
+
+    CtaBlock: {
+      label: 'Call to Action',
+      fields: {
+        heading: { type: 'text', label: 'Heading' },
+        text: { type: 'text', label: 'Text' },
+        buttonText: { type: 'text', label: 'Button text' },
+        buttonUrl: { type: 'text', label: 'Button link' },
+        background: { type: 'select', label: 'Background', options: backgroundOptions },
+      },
+      defaultProps: {
+        heading: '',
+        headingLevel: 'h2',
+        text: '',
+        buttonText: '',
+        buttonAction: 'link',
+        buttonUrl: '',
+        background: 'dark',
+      },
+      render: ({ heading, headingLevel = 'h2', text, buttonText, buttonUrl, background = 'dark' }) => <section className={`jci-builder-section jci-builder-cta theme-${background}`}>
+        <BlockHeading level={headingLevel} className="jci-builder-cta-heading">{heading}</BlockHeading><p>{text}</p>
+        {buttonText && <a className="jci-builder-button" href={buttonUrl || '#'}>{buttonText}</a>}
+      </section>,
+    },
+  },
+};
+
+export const defaultSiteBuilderData = {
+  content: [],
+  root: { props: {} },
+};
