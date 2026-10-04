@@ -113,11 +113,11 @@ export function cleanLocation(body = {}) {
   };
 }
 
-export async function listPosts(accessToken, { siteKey, table, fields }) {
+export async function listPosts(accessToken, { siteKey, table, fields, order = 'sort_order.asc,updated_at.desc' }) {
   return parseSupabase(
     await supabaseUserRest(
       accessToken,
-      `${table}?site_key=eq.${encodeURIComponent(siteKey)}&select=${encodeURIComponent(fields)}&order=sort_order.asc,updated_at.desc`,
+      `${table}?site_key=eq.${encodeURIComponent(siteKey)}&select=${encodeURIComponent(fields)}&order=${encodeURIComponent(order)}`,
       { method: 'GET' },
     ),
     `Unable to load ${table}.`,
