@@ -19,8 +19,10 @@
       <button class="nav-item active" data-view="dashboard"><span>⌂</span> Dashboard</button>
       <button class="nav-item" data-view="services"><span>▤</span> Service Posts</button>
       <button class="nav-item" data-view="locations"><span>⌖</span> Location Posts</button>
+      <button class="nav-item" data-view="blog"><span>✎</span> Moving Tips</button>
       <button class="nav-item" data-view="quotes"><span>✉</span> Quote Requests</button>
-      <button class="nav-item" data-view="settings"><span>⚙</span> Website Settings</button>\n      <button class="nav-item" data-view="integrations"><span>↻</span> Integrations</button>
+      <button class="nav-item" data-view="settings"><span>⚙</span> Website Settings</button>
+      <button class="nav-item" data-view="integrations"><span>↻</span> Integrations</button>
     </nav>
 
     <div class="sidebar-note">
@@ -55,6 +57,7 @@
         <div class="metrics">
           <article class="metric"><span>Services</span><strong id="metricServices">—</strong><small>Published + drafts</small></article>
           <article class="metric"><span>Locations</span><strong id="metricLocations">—</strong><small>Published + drafts</small></article>
+          <article class="metric"><span>Moving Tips</span><strong id="metricBlog">—</strong><small>Published + drafts</small></article>
           <article class="metric"><span>New Quotes</span><strong id="metricQuotes">—</strong><small>Waiting for follow-up</small></article>
         </div>
 
@@ -64,6 +67,7 @@
             <div class="quick">
               <button data-go="services">Service Posts <span>→</span></button>
               <button data-go="locations">Location Posts <span>→</span></button>
+              <button data-go="blog">Moving Tips <span>→</span></button>
               <button data-go="settings">Homepage Banner & Settings <span>→</span></button>
             </div>
           </article>
@@ -233,6 +237,64 @@
             <section class="panel side-panel danger hidden" id="locationDanger">
               <h3>Danger Zone</h3>
               <button class="danger-button full" type="button" id="deleteLocation">Delete Location</button>
+            </section>
+          </aside>
+        </form>
+      </div>
+
+
+      <div class="view" id="view-blog">
+        <div class="section-head">
+          <div><span class="eyebrow">Content</span><h2>Moving Tips</h2><p>Create, edit, draft and publish the articles shown on the website.</p></div>
+          <button class="primary" id="newBlogPost">New Moving Tip</button>
+        </div>
+        <div class="post-list" id="blogList"></div>
+      </div>
+
+      <div class="view" id="view-blog-editor">
+        <div class="section-head">
+          <div><span class="eyebrow">Moving Tip</span><h2 id="blogEditorTitle">New Moving Tip</h2><p>This post feeds the Moving Tips cards and the full article page.</p></div>
+          <div class="actions"><button class="secondary" data-go="blog">← Moving Tips</button><button class="primary" id="saveBlogPost">Save Post</button></div>
+        </div>
+        <form id="blogForm" class="editor-grid">
+          <div class="editor-main">
+            <section class="panel form-panel">
+              <h3>1. Post Information</h3>
+              <div class="form-grid">
+                <label class="wide">Post Title<input name="title" required></label>
+                <label>URL Slug<input name="slug" required><small>/blog/<span data-preview="blog-slug">post-name</span></small></label>
+                <label>Category<select name="category"><option>Pricing</option><option>Guides</option><option>Delivery</option><option>Business</option><option>Moving</option></select></label>
+                <label>Author<input name="authorName" value="Sunwings Transport"></label>
+                <label class="wide">Excerpt<textarea name="excerpt" rows="4" placeholder="Short description shown on the post card."></textarea></label>
+                <label class="wide">Tags <small>One per line</small><textarea name="tags" rows="4"></textarea></label>
+              </div>
+            </section>
+            <section class="panel form-panel">
+              <h3>2. Featured Image</h3>
+              <div class="form-grid"><label class="wide">Featured Image URL<input name="featuredImage" placeholder="https://..."></label></div>
+            </section>
+            <section class="panel form-panel">
+              <h3>3. Article</h3>
+              <div class="form-grid">
+                <label class="wide">Article Body <small>Use HTML headings, paragraphs, lists and links. H2/H3 headings automatically build the “On this page” menu.</small><textarea name="body" rows="22" placeholder="<h2>The short answer</h2>&#10;<p>...</p>"></textarea></label>
+              </div>
+            </section>
+          </div>
+          <aside class="editor-side">
+            <section class="panel side-panel">
+              <h3>Publishing</h3>
+              <label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label>
+              <label>Publish Date<input name="publishedAt" type="datetime-local"></label>
+              <button class="primary full" type="submit">Save Post</button>
+            </section>
+            <section class="panel side-panel">
+              <h3>SEO</h3>
+              <label>SEO Title<input name="seoTitle"></label>
+              <label>Meta Description<textarea name="seoDescription" rows="5"></textarea></label>
+            </section>
+            <section class="panel side-panel danger hidden" id="blogDanger">
+              <h3>Danger Zone</h3>
+              <button class="danger-button full" type="button" id="deleteBlogPost">Delete Post</button>
             </section>
           </aside>
         </form>
