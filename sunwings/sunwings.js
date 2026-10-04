@@ -3,6 +3,7 @@ const API={
   locations:'/api/admin/sunwings/locations',
   quotes:'/api/admin/sunwings/quote-requests',
   settings:'/api/admin/sunwings/site-settings',\n  integrations:'/api/admin/sunwings/integrations',
+  facebookPosts:'/api/admin/sunwings/facebook-posts',
 };
 
 const state={
@@ -12,6 +13,7 @@ const state={
   service:null,
   location:null,
   faq:[],\n  integrations:{},
+  facebookPosts:[],
 };
 
 const views={
@@ -234,6 +236,30 @@ async function saveSettings(){
 }
 
 
+
+async function loadFacebookPosts(){
+  const payload=await api(API.facebookPosts);
+  state.facebookPosts=Array.isArray(payload.posts)?payload.posts:[];
+  const target=document.getElementById('facebookFeedPreview');
+  if(!target)return;
+  if(!state.facebookPosts.length){target.innerHTML='<div class="empty">No Facebook posts synced yet.</div>';return}
+  target.innerHTML=state.facebookPosts.map(post=>`
+    <article class="social-preview-card">
+      ${post.image_url?`<img src="${escapeHtml(post.image_url)}" alt="">`:''}
+      <div><small>${date(post.published_at)}</small><p>${escapeHtml(post.message||'Facebook post')}</p>
+      ${post.permalink_url?`<a href="${escapeHtml(post.permalink_url)}" target="_blank" rel="noreferrer">View on Facebook ↗</a>`:''}</div>
+    </article>`).join('');
+}
+async function syncFacebookPosts(){
+  const button=document.getElementById('syncFacebookPosts');
+  button.disabled=true; button.textContent='Syncing…';
+  try{
+    const payload=await api(API.facebookPosts,{method:'POST'});
+    notice(`Synced ${payload.count||0} Facebook posts.`);
+    await loadFacebookPosts();
+  }finally{button.disabled=false;button.textContent='Sync Facebook Posts'}
+}
+
 function integrationForm(provider){return document.getElementById(provider==='google_reviews'?'googleIntegrationForm':'facebookIntegrationForm')}
 function integrationPrefix(provider){return provider==='google_reviews'?'google':'facebook'}
 function setIntegrationForm(provider,item={}){
@@ -247,7 +273,7 @@ function setIntegrationForm(provider,item={}){
   status.className='connection-badge '+(item.last_test_ok===true?'connected':item.last_test_ok===false?'failed':'');
   document.getElementById(prefix+'Detail').textContent=item.last_test_message||(item.last_tested_at?'Last tested '+date(item.last_tested_at):'Enter the required information, then test the connection.');
 }
-async function loadIntegrations(){
+async function loadIntegrations();loadFacebookPosts(){
   const payload=await api(API.integrations);
   state.integrations=Object.fromEntries((payload.integrations||[]).map(item=>[item.provider,item]));
   setIntegrationForm('google_reviews',state.integrations.google_reviews||{});
@@ -372,3 +398,6 @@ document.getElementById('deleteLocation').addEventListener('click',async()=>{
 
 showView(location.hash.slice(1)||'dashboard');
 initialLoad();
+
+const syncFacebookButton=document.getElementById('syncFacebookPosts');
+if(syncFacebookButton)syncFacebookButton.addEventListener('click',()=>syncFacebookPosts().catch(error=>notice(error.message,'error')));
