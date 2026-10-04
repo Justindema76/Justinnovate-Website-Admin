@@ -1,18 +1,23 @@
 const API={
   services:'/api/admin/sunwings/services',
   locations:'/api/admin/sunwings/locations',
+  blog:'/api/admin/sunwings/blog-posts',
   quotes:'/api/admin/sunwings/quote-requests',
-  settings:'/api/admin/sunwings/site-settings',\n  integrations:'/api/admin/sunwings/integrations',
+  settings:'/api/admin/sunwings/site-settings',
+  integrations:'/api/admin/sunwings/integrations',
   facebookPosts:'/api/admin/sunwings/facebook-posts',
 };
 
 const state={
   services:[],
   locations:[],
+  blog:[],
   quotes:[],
   service:null,
   location:null,
-  faq:[],\n  integrations:{},
+  blogPost:null,
+  faq:[],
+  integrations:{},
   facebookPosts:[],
 };
 
@@ -22,8 +27,11 @@ const views={
   'service-editor':'Service Post',
   locations:'Location Posts',
   'location-editor':'Location Post',
+  blog:'Moving Tips',
+  'blog-editor':'Moving Tip',
   quotes:'Quote Requests',
-  settings:'Website Settings',\n  integrations:'Integrations',
+  settings:'Website Settings',
+  integrations:'Integrations',
 };
 
 const nav=[...document.querySelectorAll('.nav-item')];
@@ -77,8 +85,10 @@ function showView(name){
 function slugify(value=''){
   return String(value).toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-');
 }
-function lines(value=''){return String(value||'').split('\n').map(item=>item.trim()).filter(Boolean)}
-function toLines(value=[]){return Array.isArray(value)?value.join('\n'):''}
+function lines(value=''){return String(value||'').split('
+').map(item=>item.trim()).filter(Boolean)}
+function toLines(value=[]){return Array.isArray(value)?value.join('
+'):''}
 function byName(form,name){return form.elements.namedItem(name)}
 function readForm(form){
   return Object.fromEntries(new FormData(form).entries());
@@ -116,6 +126,57 @@ async function loadLocations(){
   renderPostList(document.getElementById('locationList'),state.locations,'locations');
   document.getElementById('metricLocations').textContent=state.locations.length;
 }
+async function loadBlog(){
+  const payload=await api(API.blog);
+  state.blog=Array.isArray(payload.posts)?payload.posts:[];
+  renderPostList(document.getElementById('blogList'),state.blog,'blog');
+  document.getElementById('metricBlog').textContent=state.blog.length;
+}
+
+function blogToForm(post={}){
+  const form=document.getElementById('blogForm');
+  state.blogPost=post.id?post:null;
+  const published=post.published_at?new Date(post.published_at):null;
+  const localPublished=published&&!Number.isNaN(published.getTime())
+    ? new Date(published.getTime()-published.getTimezoneOffset()*60000).toISOString().slice(0,16)
+    : '';
+  const map={
+    title:post.title||'',slug:post.slug||'',category:post.category||'Guides',
+    authorName:post.author_name||'Sunwings Transport',excerpt:post.excerpt||'',
+    tags:toLines(post.tags),featuredImage:post.featured_image||'',body:post.body||'',
+    status:post.status||'draft',publishedAt:localPublished,
+    seoTitle:post.seo_title||'',seoDescription:post.seo_description||'',
+  };
+  Object.entries(map).forEach(([key,value])=>{if(byName(form,key))byName(form,key).value=value});
+  document.getElementById('blogEditorTitle').textContent=post.id?'Edit Moving Tip':'New Moving Tip';
+  document.getElementById('blogDanger').classList.toggle('hidden',!post.id);
+  syncBlogSlugPreview();
+  showView('blog-editor');
+}
+
+function syncBlogSlugPreview(){
+  const form=document.getElementById('blogForm');
+  const value=byName(form,'slug').value||slugify(byName(form,'title').value)||'post-name';
+  document.querySelector('[data-preview="blog-slug"]').textContent=value;
+}
+
+async function saveBlogPost(){
+  const form=document.getElementById('blogForm');
+  const values=readForm(form);
+  const body={
+    ...(state.blogPost?.id?{id:state.blogPost.id}:{}),
+    ...values,
+    slug:slugify(values.slug||values.title),
+    tags:lines(values.tags),
+    publishedAt:values.publishedAt?new Date(values.publishedAt).toISOString():null,
+  };
+  const payload=await api(API.blog,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  state.blogPost=payload.post;
+  notice('Moving Tip saved.');
+  await loadBlog();
+  blogToForm(payload.post);
+}
+
 async function loadQuotes(){
   const payload=await api(API.quotes);
   state.quotes=Array.isArray(payload.requests)?payload.requests:[];
@@ -273,7 +334,7 @@ function setIntegrationForm(provider,item={}){
   status.className='connection-badge '+(item.last_test_ok===true?'connected':item.last_test_ok===false?'failed':'');
   document.getElementById(prefix+'Detail').textContent=item.last_test_message||(item.last_tested_at?'Last tested '+date(item.last_tested_at):'Enter the required information, then test the connection.');
 }
-async function loadIntegrations();loadFacebookPosts(){
+async function loadIntegrations(){
   const payload=await api(API.integrations);
   state.integrations=Object.fromEntries((payload.integrations||[]).map(item=>[item.provider,item]));
   setIntegrationForm('google_reviews',state.integrations.google_reviews||{});
@@ -298,7 +359,7 @@ function renderIntegrationPreview(provider,preview){
   target.classList.remove('hidden');
 }
 async function saveIntegration(provider,action='save'){
-  const button=document.querySelector(action==='test'?\`[data-integration-test="\${provider}"]\`:\`[data-integration-save="\${provider}"]\`);
+  const button=document.querySelector(action==='test'?`[data-integration-test="${provider}"]`:`[data-integration-save="${provider}"]`);
   const original=button.textContent; button.disabled=true; button.textContent=action==='test'?'Testing…':'Saving…';
   try{
     const payload=await api(API.integrations,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(integrationPayload(provider,action))});
@@ -310,9 +371,10 @@ async function saveIntegration(provider,action='save'){
     notice(action==='test'?'Connection successful.':'Integration settings saved.');
   }finally{button.disabled=false;button.textContent=original}
 }
-\nasync function initialLoad(){
+
+async function initialLoad(){
   try{
-    await Promise.all([loadServices(),loadLocations(),loadQuotes(),loadSettings(),loadIntegrations()]);
+    await Promise.all([loadServices(),loadLocations(),loadBlog(),loadQuotes(),loadSettings(),loadIntegrations(),loadFacebookPosts()]);
   }catch(error){
     notice(error.message,'error');
   }
@@ -325,11 +387,16 @@ scrim.addEventListener('click',closeMenu);
 
 document.getElementById('newService').addEventListener('click',()=>serviceToForm({}));
 document.getElementById('newLocation').addEventListener('click',()=>locationToForm({}));
+document.getElementById('newBlogPost').addEventListener('click',()=>blogToForm({}));
 document.getElementById('saveService').addEventListener('click',saveService);
 document.getElementById('saveLocation').addEventListener('click',saveLocation);
+document.getElementById('saveBlogPost').addEventListener('click',()=>saveBlogPost().catch(error=>notice(error.message,'error')));
 document.getElementById('serviceForm').addEventListener('submit',event=>{event.preventDefault();saveService().catch(error=>notice(error.message,'error'))});
 document.getElementById('locationForm').addEventListener('submit',event=>{event.preventDefault();saveLocation().catch(error=>notice(error.message,'error'))});
-document.getElementById('saveSettings').addEventListener('click',()=>saveSettings().catch(error=>notice(error.message,'error')));\ndocument.querySelectorAll('[data-integration-save]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationSave,'save').catch(error=>notice(error.message,'error'))));\ndocument.querySelectorAll('[data-integration-test]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationTest,'test').catch(error=>notice(error.message,'error'))));
+document.getElementById('blogForm').addEventListener('submit',event=>{event.preventDefault();saveBlogPost().catch(error=>notice(error.message,'error'))});
+document.getElementById('saveSettings').addEventListener('click',()=>saveSettings().catch(error=>notice(error.message,'error')));
+document.querySelectorAll('[data-integration-save]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationSave,'save').catch(error=>notice(error.message,'error'))));
+document.querySelectorAll('[data-integration-test]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationTest,'test').catch(error=>notice(error.message,'error'))));
 
 document.getElementById('serviceList').addEventListener('click',event=>{
   const id=event.target.closest('[data-edit-services]')?.dataset.editServices;
@@ -338,6 +405,10 @@ document.getElementById('serviceList').addEventListener('click',event=>{
 document.getElementById('locationList').addEventListener('click',event=>{
   const id=event.target.closest('[data-edit-locations]')?.dataset.editLocations;
   if(id)locationToForm(state.locations.find(item=>item.id===id)||{});
+});
+document.getElementById('blogList').addEventListener('click',event=>{
+  const id=event.target.closest('[data-edit-blog]')?.dataset.editBlog;
+  if(id)blogToForm(state.blog.find(item=>item.id===id)||{});
 });
 document.getElementById('quoteList').addEventListener('change',async event=>{
   const id=event.target.dataset.quoteStatus;
@@ -368,6 +439,13 @@ document.getElementById('serviceForm').addEventListener('input',event=>{
   if(event.target.name==='slug')event.target.dataset.touched='1';
   syncSlugPreview('service');
 });
+document.getElementById('blogForm').addEventListener('input',event=>{
+  if(event.target.name==='title'&&!state.blogPost?.id&&!byName(event.currentTarget,'slug').dataset.touched){
+    byName(event.currentTarget,'slug').value=slugify(event.target.value);
+  }
+  if(event.target.name==='slug')event.target.dataset.touched='1';
+  syncBlogSlugPreview();
+});
 document.getElementById('locationForm').addEventListener('input',event=>{
   if(event.target.name==='title'&&!state.location?.id&&!byName(event.currentTarget,'slug').dataset.touched){
     byName(event.currentTarget,'slug').value=slugify(event.target.value);
@@ -383,6 +461,16 @@ document.getElementById('deleteService').addEventListener('click',async()=>{
     state.service=null;
     await loadServices();
     showView('services');
+  }catch(error){notice(error.message,'error')}
+});
+document.getElementById('deleteBlogPost').addEventListener('click',async()=>{
+  if(!state.blogPost?.id||!confirm(`Delete "${state.blogPost.title}"?`))return;
+  try{
+    await api(`${API.blog}?id=${encodeURIComponent(state.blogPost.id)}`,{method:'DELETE'});
+    notice('Moving Tip deleted.');
+    state.blogPost=null;
+    await loadBlog();
+    showView('blog');
   }catch(error){notice(error.message,'error')}
 });
 document.getElementById('deleteLocation').addEventListener('click',async()=>{
