@@ -395,6 +395,12 @@ document.getElementById('serviceForm').addEventListener('submit',event=>{event.p
 document.getElementById('locationForm').addEventListener('submit',event=>{event.preventDefault();saveLocation().catch(error=>notice(error.message,'error'))});
 document.getElementById('blogForm').addEventListener('submit',event=>{event.preventDefault();saveBlogPost().catch(error=>notice(error.message,'error'))});
 document.getElementById('saveSettings').addEventListener('click',()=>saveSettings().catch(error=>notice(error.message,'error')));
+document.getElementById('resetHeaderSettings').addEventListener('click',()=>{
+  const form=document.getElementById('settingsForm');
+  const defaults={logo_desktop_width:140,logo_mobile_width:170,logo_desktop_max_height:100,logo_mobile_max_height:90,logo_offset_x:0,logo_offset_y:0,header_desktop_height:110,header_mobile_height:105,topbar_enabled:'true',topbar_emphasis:'Reliable • On-Time • Professional',topbar_text:'Moving & delivery from Toronto to Niagara',call_button_enabled:'true',call_button_text:'Call Now'};
+  Object.entries(defaults).forEach(([key,value])=>{if(byName(form,key))byName(form,key).value=value});
+  notice('Header defaults restored. Save Settings to apply them.');
+});
 document.querySelectorAll('[data-integration-save]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationSave,'save').catch(error=>notice(error.message,'error'))));
 document.querySelectorAll('[data-integration-test]').forEach(button=>button.addEventListener('click',()=>saveIntegration(button.dataset.integrationTest,'test').catch(error=>notice(error.message,'error'))));
 
