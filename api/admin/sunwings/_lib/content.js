@@ -7,6 +7,11 @@ export const SERVICE_FIELDS = [
   'status','sort_order','published_at','created_at','updated_at',
 ].join(',');
 
+export const BLOG_FIELDS = [
+  'site_key','id','slug','title','excerpt','seo_title','seo_description','category','tags',
+  'featured_image','body','status','author_name','published_at','created_at','updated_at',
+].join(',');
+
 export const LOCATION_FIELDS = [
   'site_key','id','slug','title','region','eyebrow','hero_title','hero_description','banner_image','banner_alt',
   'intro','body_html','neighbourhoods','service_slugs','faq','cta_title','cta_text','seo_title',
@@ -52,6 +57,22 @@ export function cleanService(body = {}) {
     sort_order: Number.isFinite(Number(body.sortOrder ?? body.sort_order))
       ? Math.trunc(Number(body.sortOrder ?? body.sort_order))
       : 0,
+    ...publishFields(body),
+  };
+}
+
+export function cleanBlogPost(body = {}) {
+  return {
+    slug: text(body.slug, 180),
+    title: text(body.title, 240),
+    excerpt: text(body.excerpt, 1200),
+    seo_title: text(body.seoTitle ?? body.seo_title, 300),
+    seo_description: text(body.seoDescription ?? body.seo_description, 1000),
+    category: text(body.category, 120) || 'Guides',
+    tags: textArray(body.tags),
+    featured_image: text(body.featuredImage ?? body.featured_image, 2000),
+    body: String(body.body ?? ''),
+    author_name: text(body.authorName ?? body.author_name, 180) || 'Sunwings Transport',
     ...publishFields(body),
   };
 }
