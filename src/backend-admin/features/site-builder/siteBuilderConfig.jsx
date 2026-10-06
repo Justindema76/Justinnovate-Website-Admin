@@ -1369,12 +1369,61 @@ export const siteBuilderConfig = {
         buttonText: { type:'text', label:'Bottom link text' },
         buttonUrl: { type:'text', label:'Bottom link URL' },
         background: { type:'select', label:'Section background', options:[{label:'White',value:'white'},{label:'Soft',value:'soft'}] },
+        service1Image: { ...imageField, label:'Service 1 image override' },
+        service1ImageAlt: { type:'text', label:'Service 1 image alt text' },
+        service1Title: { type:'text', label:'Service 1 title override' },
+        service1Text: { type:'textarea', label:'Service 1 description override' },
+        service1LinkText: { type:'text', label:'Service 1 link text' },
+        service1Url: { type:'text', label:'Service 1 link URL override' },
+        service2Image: { ...imageField, label:'Service 2 image override' },
+        service2ImageAlt: { type:'text', label:'Service 2 image alt text' },
+        service2Title: { type:'text', label:'Service 2 title override' },
+        service2Text: { type:'textarea', label:'Service 2 description override' },
+        service2LinkText: { type:'text', label:'Service 2 link text' },
+        service2Url: { type:'text', label:'Service 2 link URL override' },
+        service3Image: { ...imageField, label:'Service 3 image override' },
+        service3ImageAlt: { type:'text', label:'Service 3 image alt text' },
+        service3Title: { type:'text', label:'Service 3 title override' },
+        service3Text: { type:'textarea', label:'Service 3 description override' },
+        service3LinkText: { type:'text', label:'Service 3 link text' },
+        service3Url: { type:'text', label:'Service 3 link URL override' },
+        service4Image: { ...imageField, label:'Service 4 image override' },
+        service4ImageAlt: { type:'text', label:'Service 4 image alt text' },
+        service4Title: { type:'text', label:'Service 4 title override' },
+        service4Text: { type:'textarea', label:'Service 4 description override' },
+        service4LinkText: { type:'text', label:'Service 4 link text' },
+        service4Url: { type:'text', label:'Service 4 link URL override' },
+        service5Image: { ...imageField, label:'Service 5 image override' },
+        service5ImageAlt: { type:'text', label:'Service 5 image alt text' },
+        service5Title: { type:'text', label:'Service 5 title override' },
+        service5Text: { type:'textarea', label:'Service 5 description override' },
+        service5LinkText: { type:'text', label:'Service 5 link text' },
+        service5Url: { type:'text', label:'Service 5 link URL override' },
+        service6Image: { ...imageField, label:'Service 6 image override' },
+        service6ImageAlt: { type:'text', label:'Service 6 image alt text' },
+        service6Title: { type:'text', label:'Service 6 title override' },
+        service6Text: { type:'textarea', label:'Service 6 description override' },
+        service6LinkText: { type:'text', label:'Service 6 link text' },
+        service6Url: { type:'text', label:'Service 6 link URL override' },
       },
-      defaultProps: { eyebrow:'What we do',heading:'One call for every move.',text:'From a single couch to a full warehouse transfer, Sunwings brings the truck, the crew and the care.',align:'center',limit:'0',buttonText:'',buttonUrl:'/services',background:'white' },
-      render: p => <section style={{padding:'36px 8px',background:p.background==='soft'?'#F6F8FB':'#fff'}}>
-        <div style={{textAlign:p.align==='left'?'left':'center'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase',letterSpacing:'.12em'}}>{p.eyebrow}</div><h2 style={{fontSize:34,margin:'6px 0'}}>{p.heading}</h2><p style={{color:'#5B6B82'}}>{p.text}</p></div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginTop:20}}>{['Residential Moving','Furniture Delivery','Commercial Transport','Packing & Protection','Warehouse & Container Unloading','Junk Removal'].slice(0,Number(p.limit||0)>0?Number(p.limit):6).map(item => <div key={item} style={{padding:20,border:'1px solid #E3E9F2',borderRadius:14,background:'#fff',fontWeight:800}}>{item}<small style={{display:'block',marginTop:6,color:'#64748b',fontWeight:500}}>Pulled from Service Posts</small></div>)}</div>
-      </section>,
+      defaultProps: { eyebrow:'What we do',heading:'One call for every move.',text:'From a single couch to a full warehouse transfer, Sunwings brings the truck, the crew and the care.',align:'center',limit:'0',buttonText:'',buttonUrl:'/services',background:'white',service1Image:'',service1ImageAlt:'',service1Title:'',service1Text:'',service1LinkText:'',service1Url:'',service2Image:'',service2ImageAlt:'',service2Title:'',service2Text:'',service2LinkText:'',service2Url:'',service3Image:'',service3ImageAlt:'',service3Title:'',service3Text:'',service3LinkText:'',service3Url:'',service4Image:'',service4ImageAlt:'',service4Title:'',service4Text:'',service4LinkText:'',service4Url:'',service5Image:'',service5ImageAlt:'',service5Title:'',service5Text:'',service5LinkText:'',service5Url:'',service6Image:'',service6ImageAlt:'',service6Title:'',service6Text:'',service6LinkText:'',service6Url:'', },
+      render: p => {
+        const names=['Residential Moving','Furniture Delivery','Commercial Transport','Packing & Protection','Warehouse & Container Unloading','Junk Removal'];
+        const max=Number(p.limit||0)>0?Number(p.limit):6;
+        return <section style={{padding:'36px 8px',background:p.background==='soft'?'#F6F8FB':'#fff'}}>
+          <div style={{textAlign:p.align==='left'?'left':'center'}}><div style={{color:'#1F5FA8',fontSize:12,fontWeight:800,textTransform:'uppercase',letterSpacing:'.12em'}}>{p.eyebrow}</div><h2 style={{fontSize:34,margin:'6px 0'}}>{p.heading}</h2><p style={{color:'#5B6B82'}}>{p.text}</p></div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginTop:20}}>{names.slice(0,max).map((item,index) => {
+            const n=index+1;
+            const image=p[`service${n}Image`];
+            const title=p[`service${n}Title`]||item;
+            const description=p[`service${n}Text`]||'Pulled from Service Posts unless overridden here.';
+            return <div key={n} style={{border:'1px solid #E3E9F2',borderRadius:14,background:'#fff',overflow:'hidden'}}>
+              {image?<img src={image} alt={p[`service${n}ImageAlt`]||''} style={{width:'100%',height:120,objectFit:'cover'}}/>:<div style={{height:80,background:'#E8F1FB',display:'grid',placeItems:'center',color:'#64748b'}}>Service Post image</div>}
+              <div style={{padding:16}}><b>{title}</b><small style={{display:'block',marginTop:6,color:'#64748b',fontWeight:500}}>{description}</small><small style={{display:'block',marginTop:8,color:'#1F5FA8',fontWeight:700}}>{p[`service${n}LinkText`]||'Learn more →'}</small></div>
+            </div>;
+          })}</div>
+        </section>;
+      },
     },
 
     SunwingsStepsBlock: {
